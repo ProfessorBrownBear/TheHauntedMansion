@@ -1,0 +1,1241 @@
+/**
+ * ╔══════════════════════════════════════════════════════════════════╗
+ * ║                THE HAUNTED HOUSE - KOTLIN LAB WORKBOOK           ║
+ * ║                    A Halloween Coding Adventure                   ║
+ * ╚══════════════════════════════════════════════════════════════════╝
+ *
+ * Welcome, brave explorer! You've arrived at the infamous Ravencroft Manor,
+ * a haunted house filled with mysterious rooms, mischievous spirits, and
+ * ancient artifacts. Your goal: explore the house, gain Power Levels,
+ * and escape before the spirits whisk you away to the Other Realm!
+ *
+ * This lab will teach you essential Kotlin concepts through spooky exploration.
+ * Each section represents a different room or encounter in the haunted house.
+ */
+
+import kotlin.random.Random
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 1: ENUMS - The Types of Rooms in Our Haunted House
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Enums
+ * Enums are special classes that represent a fixed set of constants.
+ * Perfect for representing the different types of rooms in our haunted house!
+ * Each enum value can have properties and methods.
+ */
+enum class RoomType(
+    val dangerLevel: Int,        // How dangerous is this room?
+    val maxPowerGain: Int,        // Maximum power you can gain here
+    val description: String       // Spooky description
+) {
+    // Each room type is a constant with specific properties
+    LIBRARY(
+        dangerLevel = 2,
+        maxPowerGain = 15,
+        description = "📚 Dusty tomes whisper forbidden knowledge..."
+    ),
+    CELLAR(
+        dangerLevel = 4,
+        maxPowerGain = 25,
+        description = "🕸️ Dark and damp, something scurries in the shadows..."
+    ),
+    ATTIC(
+        dangerLevel = 3,
+        maxPowerGain = 20,
+        description = "🦇 Bats flutter as ancient portraits watch your every move..."
+    ),
+    KITCHEN(
+        dangerLevel = 1,
+        maxPowerGain = 10,
+        description = "🔪 Pots and pans rattle on their own..."
+    ),
+    MASTER_BEDROOM(
+        dangerLevel = 5,
+        maxPowerGain = 30,
+        description = "🛏️ The bed where Lord Ravencroft met his mysterious end..."
+    ),
+    RITUAL_CHAMBER(
+        dangerLevel = 10,
+        maxPowerGain = 50,
+        description = "⭐ A pentagram glows on the floor, candles light themselves..."
+    );
+
+    // Enums can have methods!
+    fun enterRoom(): String {
+        return "You cautiously enter the ${this.name.lowercase().replace('_', ' ')}...\n${description}"
+    }
+
+    // We can check if a room is too dangerous
+    fun isTooRisky(currentPower: Int): Boolean {
+        return dangerLevel > currentPower / 10
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 2: INTERFACES - Defining Behaviors for Haunted Entities
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Interfaces
+ * Interfaces define a contract of what methods/properties a class must implement.
+ * They enable polymorphism - different types can be treated uniformly.
+ * Unlike abstract classes, a class can implement multiple interfaces!
+ */
+
+// All supernatural entities in the house can interact with explorers
+interface Supernatural {
+    val powerLevel: Int
+    val name: String
+
+    // Abstract method - implementers must define this
+    fun interact(explorer: Explorer): String
+
+    // Default implementation - can be overridden
+    fun materialize(): String {
+        return "💨 A ghostly presence materializes... it's $name!"
+    }
+}
+
+// Some entities can possess objects
+interface Possessable {
+    var isPossessed: Boolean
+
+    fun possess() {
+        isPossessed = true
+    }
+
+    fun exorcise() {
+        isPossessed = false
+    }
+}
+
+// Some entities can grant power to explorers
+interface PowerGranting {
+    fun grantPower(): Int
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 3: DATA CLASSES - Automatic equals(), toString(), copy()
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Data Classes
+ * Data classes automatically generate useful methods:
+ * - equals() and hashCode() for equality checking
+ * - toString() for readable string representation
+ * - copy() for creating modified copies
+ * - componentN() functions for destructuring
+ *
+ * Perfect for our Explorer and Spirit entities!
+ */
+
+// The Explorer (player) - a data class with all the auto-generated goodies
+data class Explorer(
+    val name: String,
+    var powerLevel: Int = 10,           // Starting power
+    var sanity: Int = 100,               // Mental health (max 100)
+    var artifacts: MutableList<Artifact> = mutableListOf(),
+    var currentRoom: RoomType = RoomType.LIBRARY
+) {
+    /**
+     * IMPORTANT: Data classes automatically generate:
+     * 1. equals() - Compares all properties in primary constructor
+     * 2. hashCode() - Consistent with equals()
+     * 3. toString() - Returns "Explorer(name=..., powerLevel=..., etc.)"
+     * 4. copy() - Creates a copy with optional parameter changes
+     * 5. componentN() - For destructuring declarations
+     */
+
+    // We can still add our own methods
+    fun explore(room: RoomType): String {
+        currentRoom = room
+        return room.enterRoom()
+    }
+
+    fun loseSanity(amount: Int) {
+        sanity = (sanity - amount).coerceAtLeast(0)
+        if (sanity <= 0) {
+            println("🌀 Your mind shatters! The spirits claim you!")
+        }
+    }
+
+    fun gainPower(amount: Int) {
+        val oldPower = powerLevel
+        powerLevel += amount
+        println("⚡ Power increased from $oldPower to $powerLevel!")
+    }
+}
+
+// A Spirit entity - implements our interfaces
+data class Spirit(
+    override val name: String,
+    override val powerLevel: Int,
+    val spiritType: SpiritType,
+    override var isPossessed: Boolean = false  // From Possessable interface
+) : Supernatural, Possessable, PowerGranting {
+
+    // Implementing Supernatural interface
+    override fun interact(explorer: Explorer): String {
+        return when(spiritType) {
+            SpiritType.FRIENDLY -> {
+                val power = grantPower()
+                explorer.gainPower(power)
+                "👻 $name whispers ancient secrets... You gain $power power!"
+            }
+            SpiritType.NEUTRAL -> {
+                "👤 $name observes you silently..."
+            }
+            SpiritType.HOSTILE -> {
+                explorer.loseSanity(15)
+                "😈 $name shrieks! Your sanity drops by 15!"
+            }
+            SpiritType.MISCHIEVOUS -> {
+                val trick = Random.nextInt(2)
+                if (trick == 0) {
+                    explorer.loseSanity(5)
+                    "🎭 $name plays a trick! You lose 5 sanity!"
+                } else {
+                    val power = 5
+                    explorer.gainPower(power)
+                    "🎭 $name decides to help! You gain $power power!"
+                }
+            }
+        }
+    }
+
+    // Implementing PowerGranting interface
+    override fun grantPower(): Int {
+        return when(spiritType) {
+            SpiritType.FRIENDLY -> powerLevel / 2
+            SpiritType.MISCHIEVOUS -> Random.nextInt(1, 10)
+            else -> 0
+        }
+    }
+}
+
+// Spirit types enum
+enum class SpiritType {
+    FRIENDLY, NEUTRAL, HOSTILE, MISCHIEVOUS
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 4: REGULAR CLASSES WITH EQUALS() AND COPY() METHODS
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Regular Classes with equals() and copy()
+ * Unlike data classes, regular classes don't auto-generate these methods.
+ * We must implement them manually if needed.
+ * This shows the difference and why data classes are convenient!
+ */
+
+class Artifact(
+    val name: String,
+    val power: Int,
+    var isCursed: Boolean = false
+) {
+    // Manual implementation of equals()
+    // This is what data classes do automatically!
+    override fun equals(other: Any?): Boolean {
+        // First check if it's the same reference
+        if (this === other) return true
+
+        // Check if other is null or different class
+        if (other == null || this::class != other::class) return false
+
+        // Cast and compare properties
+        other as Artifact
+        return name == other.name &&
+                power == other.power &&
+                isCursed == other.isCursed
+    }
+
+    // Manual implementation of hashCode()
+    // Should be consistent with equals()
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + power
+        result = 31 * result + isCursed.hashCode()
+        return result
+    }
+
+    // Manual implementation of toString()
+    override fun toString(): String {
+        val cursedText = if (isCursed) " [CURSED]" else ""
+        return "Artifact(name='$name', power=$power$cursedText)"
+    }
+
+    // Manual implementation of copy()
+    // Data classes get this for free!
+    fun copy(
+        name: String = this.name,
+        power: Int = this.power,
+        isCursed: Boolean = this.isCursed
+    ): Artifact {
+        return Artifact(name, power, isCursed)
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 5: COMPANION OBJECTS - Static Members in Kotlin
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Companion Objects and Static Members
+ * Kotlin doesn't have 'static' keyword like Java.
+ * Instead, we use companion objects for class-level members.
+ * Companion objects are singleton objects tied to a class.
+ */
+
+class HauntedHouse {
+    // Companion object - contains "static" members
+    companion object {
+        // These are like static fields in Java
+        const val MAX_ROOMS = 20
+        const val ESCAPE_THRESHOLD = 100  // Power needed to escape
+        private var totalExplorers = 0     // Track all explorers who entered
+
+        // This is like a static method in Java
+        fun createRandomHouse(): HauntedHouse {
+            val house = HauntedHouse()
+            // Generate random rooms
+            repeat(10) {
+                val randomRoom = RoomType.values().random()
+                house.addRoom(Room(
+                    type = randomRoom,
+                    spirit = if (Random.nextBoolean()) generateRandomSpirit() else null
+                ))
+            }
+            return house
+        }
+
+        // Static factory method for creating spirits
+        fun generateRandomSpirit(): Spirit {
+            val names = listOf("Whisper", "Shadow", "Echo", "Phantom", "Specter")
+            val types = SpiritType.values()
+
+            return Spirit(
+                name = names.random(),
+                powerLevel = Random.nextInt(10, 50),
+                spiritType = types.random()
+            )
+        }
+
+        // Track statistics
+        fun recordExplorer(explorer: Explorer) {
+            totalExplorers++
+            println("📊 Explorer #$totalExplorers: ${explorer.name} has entered!")
+        }
+
+        // Check if enough power to escape
+        fun canEscape(powerLevel: Int): Boolean {
+            return powerLevel >= ESCAPE_THRESHOLD
+        }
+    }
+
+    // Instance members (non-static)
+    private val rooms = mutableListOf<Room>()
+    var isHaunted = true
+
+    fun addRoom(room: Room) {
+        if (rooms.size < MAX_ROOMS) {
+            rooms.add(room)
+        }
+    }
+
+    fun getRoomCount() = rooms.size
+}
+
+// Room class to hold room data
+data class Room(
+    val type: RoomType,
+    var spirit: Spirit? = null,      // Nullable - room might be empty
+    val artifacts: MutableList<Artifact> = mutableListOf()
+)
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 6: NULLABLE TYPES AND ELVIS OPERATOR
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Nullable Types (?) and Elvis Operator (?:)
+ * Kotlin has built-in null safety.
+ * - Type? means the value can be null
+ * - Type means the value cannot be null
+ * - Elvis operator (?:) provides default values for null cases
+ * - Safe call operator (?.) calls methods only if not null
+ */
+
+class GhostDetector {
+    // Nullable type - detector might not find anything
+    private var lastDetectedGhost: Spirit? = null
+
+    // Function that might return null
+    fun scanRoom(room: Room): Spirit? {
+        // Safe call operator ?. - only accesses spirit if room.spirit is not null
+        val detectedSpirit = room.spirit?.takeIf {
+            Random.nextDouble() > 0.3  // 70% chance to detect if spirit exists
+        }
+
+        lastDetectedGhost = detectedSpirit
+        return detectedSpirit
+    }
+
+    // Using Elvis operator for default values
+    fun getDetectionReport(): String {
+        // Elvis operator ?: provides default when left side is null
+        val ghostName = lastDetectedGhost?.name ?: "No ghost"
+        val powerLevel = lastDetectedGhost?.powerLevel ?: 0
+
+        // Can chain Elvis operators
+        val spiritType = lastDetectedGhost?.spiritType?.name ?: "Unknown"
+
+        return """
+            🔍 Ghost Detector Report:
+            Name: $ghostName
+            Power: $powerLevel
+            Type: $spiritType
+        """.trimIndent()
+    }
+
+    // Demonstrating various null-safe operations
+    fun analyzeSpirit(spirit: Spirit?) {
+        // 1. Safe call with let - executes block only if not null
+        spirit?.let { s ->
+            println("Analyzing ${s.name}...")
+        }
+
+        // 2. Elvis operator with expression
+        val analysis = spirit?.let {
+            "Spirit detected: ${it.name} with power ${it.powerLevel}"
+        } ?: "No spirit to analyze"
+
+        // 3. Checking for null explicitly
+        if (spirit != null) {
+            // Smart cast - spirit is automatically cast to non-null type here
+            println("Spirit type: ${spirit.spiritType}")
+        }
+
+        // 4. Using !! operator (not recommended - can throw NPE)
+        // Only use when you're ABSOLUTELY sure it's not null
+        // val forcedName = spirit!!.name  // Throws NPE if spirit is null
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 7: TRY-CATCH BLOCKS - Handling Supernatural Exceptions
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Try-Catch Blocks
+ * Exception handling in Kotlin is similar to Java but more flexible.
+ * - try-catch can be used as an expression (returns a value)
+ * - finally block always executes
+ * - Custom exceptions can be created
+ */
+
+// Custom exceptions for our haunted house
+class SpiritPossessionException(message: String) : Exception(message)
+class CursedArtifactException(message: String) : Exception(message)
+class PortalToOtherRealmException(message: String) : Exception(message)
+
+class DangerousExploration {
+
+    /**
+     * Try-catch as a statement
+     * Traditional exception handling
+     */
+    fun openMysteriousBox(explorer: Explorer): String {
+        try {
+            println("📦 Opening the mysterious box...")
+
+            // Simulate random dangerous outcomes
+            when(Random.nextInt(4)) {
+                0 -> {
+                    // Success case
+                    val artifact = Artifact("Ancient Amulet", 20)
+                    explorer.artifacts.add(artifact)
+                    return "✨ You found an ${artifact.name}!"
+                }
+                1 -> {
+                    // Throw custom exception
+                    throw CursedArtifactException("The box contains a cursed item!")
+                }
+                2 -> {
+                    throw SpiritPossessionException("A spirit leaps from the box!")
+                }
+                else -> {
+                    throw PortalToOtherRealmException("A portal opens!")
+                }
+            }
+        } catch (e: CursedArtifactException) {
+            // Handle specific exception
+            explorer.loseSanity(10)
+            return "☠️ ${e.message} You lose 10 sanity!"
+        } catch (e: SpiritPossessionException) {
+            // Handle another specific exception
+            explorer.loseSanity(20)
+            return "👻 ${e.message} You lose 20 sanity!"
+        } catch (e: PortalToOtherRealmException) {
+            // Most dangerous outcome
+            explorer.loseSanity(30)
+            return "🌀 ${e.message} You barely escape! Lost 30 sanity!"
+        } catch (e: Exception) {
+            // Catch all other exceptions
+            return "❌ Something unexpected happened: ${e.message}"
+        } finally {
+            // Always executes, even if exception is thrown
+            println("📦 The box closes with an ominous click...")
+        }
+    }
+
+    /**
+     * Try-catch as an expression
+     * The try-catch block returns a value!
+     */
+    fun readAncientScroll(): Int {
+        val powerGained = try {
+            // This might throw an exception
+            val difficulty = Random.nextInt(1, 10)
+            if (difficulty > 7) {
+                throw IllegalStateException("The scroll crumbles to dust!")
+            }
+
+            // If successful, return power gained
+            Random.nextInt(5, 15)
+
+        } catch (e: IllegalStateException) {
+            println("💨 ${e.message}")
+            0  // Return 0 power if failed
+        }
+
+        return powerGained
+    }
+
+    /**
+     * Using runCatching - Kotlin's functional approach to try-catch
+     * Returns a Result object that encapsulates success or failure
+     */
+    fun performRitual(explorer: Explorer): Result<String> {
+        return runCatching {
+            if (explorer.powerLevel < 50) {
+                throw IllegalStateException("Not enough power for the ritual!")
+            }
+
+            if (Random.nextDouble() < 0.3) {
+                throw SpiritPossessionException("The ritual backfires!")
+            }
+
+            explorer.gainPower(25)
+            "🔮 Ritual successful! Gained 25 power!"
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 8: DEEP VS SHALLOW COPYING
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Deep vs Shallow Copying
+ * - Shallow copy: Creates new object but references to nested objects remain same
+ * - Deep copy: Creates new object with completely independent copies of nested objects
+ *
+ * This is crucial when dealing with mutable data!
+ */
+
+class CopyingDemo {
+
+    /**
+     * SHALLOW COPY with Data Class
+     * The copy() method of data classes performs shallow copy
+     */
+    fun demonstrateShallowCopy() {
+        println("\n=== SHALLOW COPY DEMONSTRATION ===")
+
+        // Create original explorer with artifacts
+        val artifacts = mutableListOf(
+            Artifact("Magic Wand", 15),
+            Artifact("Crystal Ball", 10)
+        )
+
+        val original = Explorer("Alice", 50, 80, artifacts)
+
+        // Shallow copy using data class copy()
+        val shallowCopy = original.copy(name = "Alice's Clone")
+
+        // The copy has different primitive values
+        println("Original name: ${original.name}")      // Alice
+        println("Copy name: ${shallowCopy.name}")       // Alice's Clone
+
+        // BUT! The artifacts list is the SAME reference
+        println("Same artifacts list? ${original.artifacts === shallowCopy.artifacts}")  // true!
+
+        // Modifying the list affects BOTH explorers!
+        shallowCopy.artifacts.add(Artifact("Cursed Ring", 5, true))
+
+        println("Original artifacts: ${original.artifacts.size}")   // 3 items!
+        println("Copy artifacts: ${shallowCopy.artifacts.size}")    // 3 items!
+
+        // They share the same list!
+    }
+
+    /**
+     * DEEP COPY
+     * Must manually copy nested objects
+     */
+    fun demonstrateDeepCopy() {
+        println("\n=== DEEP COPY DEMONSTRATION ===")
+
+        val artifacts = mutableListOf(
+            Artifact("Magic Wand", 15),
+            Artifact("Crystal Ball", 10)
+        )
+
+        val original = Explorer("Bob", 50, 80, artifacts)
+
+        // Deep copy - manually copy the artifacts list
+        val deepCopy = original.copy(
+            name = "Bob's Clone",
+            // Create a NEW list with copies of artifacts
+            artifacts = original.artifacts.map { artifact ->
+                artifact.copy()  // Copy each artifact
+            }.toMutableList()
+        )
+
+        // Now the artifacts lists are DIFFERENT
+        println("Same artifacts list? ${original.artifacts === deepCopy.artifacts}")  // false!
+
+        // Modifying one doesn't affect the other
+        deepCopy.artifacts.add(Artifact("Holy Cross", 20))
+
+        println("Original artifacts: ${original.artifacts.size}")   // 2 items
+        println("Copy artifacts: ${deepCopy.artifacts.size}")      // 3 items
+
+        // Even modifying individual artifacts doesn't affect the original
+        deepCopy.artifacts[0].isCursed = true
+        println("Original first artifact cursed? ${original.artifacts[0].isCursed}")  // false
+        println("Copy first artifact cursed? ${deepCopy.artifacts[0].isCursed}")     // true
+    }
+
+    /**
+     * Custom deep copy implementation
+     */
+    fun createDeepCopy(explorer: Explorer): Explorer {
+        return Explorer(
+            name = explorer.name,
+            powerLevel = explorer.powerLevel,
+            sanity = explorer.sanity,
+            // Deep copy the artifacts list
+            artifacts = explorer.artifacts.map { it.copy() }.toMutableList(),
+            currentRoom = explorer.currentRoom  // Enum is safe to copy directly
+        )
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 9: PASS BY REFERENCE AND SHARED REFERENCES
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Pass by Reference and Shared References
+ * In Kotlin (like Java):
+ * - Primitives are passed by value
+ * - Objects are passed by reference (technically, reference value is copied)
+ * - Multiple variables can reference the same object
+ * - Modifying the object through one reference affects all references
+ */
+
+class ReferenceDemo {
+
+    /**
+     * Demonstrates that objects are passed by reference
+     */
+    fun explorersShareArtifact() {
+        println("\n=== SHARED REFERENCES DEMONSTRATION ===")
+
+        // Create a powerful artifact
+        val sharedArtifact = Artifact("Necronomicon", 100, true)
+
+        // Two explorers find the same artifact
+        val explorer1 = Explorer("Sarah", 30, 90)
+        val explorer2 = Explorer("John", 25, 95)
+
+        // Both add the SAME artifact to their inventory
+        explorer1.artifacts.add(sharedArtifact)
+        explorer2.artifacts.add(sharedArtifact)
+
+        // They're referencing the SAME object
+        println("Same artifact? ${explorer1.artifacts[0] === explorer2.artifacts[0]}")  // true!
+
+        // If one modifies it, both see the change
+        explorer1.artifacts[0].isCursed = false  // Sarah cleanses the curse
+
+        println("John's artifact cursed? ${explorer2.artifacts[0].isCursed}")  // false!
+        // John also sees it's no longer cursed!
+    }
+
+    /**
+     * Function that modifies objects passed to it
+     * Demonstrates pass by reference behavior
+     */
+    fun enhanceExplorer(explorer: Explorer, artifact: Artifact) {
+        // These modifications affect the original objects!
+        explorer.powerLevel += 10
+        artifact.isCursed = false
+
+        // But reassigning the parameter doesn't affect the original reference
+        // explorer = Explorer("New Explorer", 100, 100)  // This won't change the original
+    }
+
+    /**
+     * Demonstrates the difference between modifying and reassigning
+     */
+    fun demonstrateReferenceSemantics() {
+        println("\n=== REFERENCE SEMANTICS ===")
+
+        val explorer = Explorer("Emma", 40, 85)
+        val artifact = Artifact("Shadow Blade", 30, true)
+
+        println("Before enhancement:")
+        println("  Power: ${explorer.powerLevel}")
+        println("  Artifact cursed: ${artifact.isCursed}")
+
+        // Pass to function - modifications will affect originals
+        enhanceExplorer(explorer, artifact)
+
+        println("After enhancement:")
+        println("  Power: ${explorer.powerLevel}")        // Changed!
+        println("  Artifact cursed: ${artifact.isCursed}") // Changed!
+    }
+
+    /**
+     * Working with mutable collections and references
+     */
+    fun demonstrateCollectionReferences() {
+        println("\n=== COLLECTION REFERENCES ===")
+
+        // Create a mutable list
+        val originalList = mutableListOf(
+            Spirit("Casper", 10, SpiritType.FRIENDLY),
+            Spirit("Boo", 15, SpiritType.MISCHIEVOUS)
+        )
+
+        // Assign to another variable - same reference!
+        val sameList = originalList
+
+        // Create a copy - different list, but same Spirit objects inside
+        val copiedList = originalList.toMutableList()
+
+        // Add to original
+        originalList.add(Spirit("Phantom", 20, SpiritType.HOSTILE))
+
+        println("Original size: ${originalList.size}")  // 3
+        println("Same ref size: ${sameList.size}")      // 3 (same list!)
+        println("Copied size: ${copiedList.size}")      // 2 (different list)
+
+        // But the Spirits inside are still shared!
+        originalList[0].isPossessed = true
+        println("Copied list spirit possessed? ${copiedList[0].isPossessed}")  // true!
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 10: EXPLICIT TYPE DECLARATIONS VS IMPLICIT TYPE INFERENCE
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * CONCEPT: Type Declarations vs Type Inference
+ * Kotlin has powerful type inference - the compiler can often figure out types.
+ * - Explicit: You declare the type explicitly
+ * - Implicit: Compiler infers the type from context
+ *
+ * When to use each:
+ * - Explicit: For clarity, public APIs, when type isn't obvious
+ * - Implicit: For local variables, when type is obvious from initialization
+ */
+
+class TypeDeclarationDemo {
+
+    // Explicit type declarations for class properties (recommended for public APIs)
+    private val explicitString: String = "Haunted House"
+    private val explicitNumber: Int = 13
+    private val explicitSpirit: Spirit = Spirit("Ghost", 20, SpiritType.NEUTRAL)
+
+    // Implicit type inference (compiler figures it out)
+    private val implicitString = "Spooky Manor"        // Inferred as String
+    private val implicitNumber = 666                   // Inferred as Int
+    private val implicitSpirit = generateSpirit()      // Inferred from function return
+
+    // Function with explicit return type (recommended for public functions)
+    fun calculateDanger(room: RoomType, explorer: Explorer): Int {
+        return room.dangerLevel * (100 - explorer.sanity) / 10
+    }
+
+    // Function with inferred return type (okay for private/simple functions)
+    private fun generateSpirit() = Spirit("Shadow", 15, SpiritType.HOSTILE)
+
+    /**
+     * Demonstrates various type inference scenarios
+     */
+    fun demonstrateTypeInference() {
+        println("\n=== TYPE INFERENCE DEMONSTRATION ===")
+
+        // Local variables - inference is usually preferred
+        val localString = "Hello"                    // Inferred: String
+        val localInt = 42                           // Inferred: Int
+        val localDouble = 3.14                      // Inferred: Double
+        val localBoolean = true                     // Inferred: Boolean
+
+        // Collections - inference works well
+        val spiritList = listOf(                    // Inferred: List<Spirit>
+            Spirit("A", 10, SpiritType.FRIENDLY),
+            Spirit("B", 20, SpiritType.HOSTILE)
+        )
+
+        val mixedList = listOf("Ghost", 1, true)    // Inferred: List<Any>
+
+        val artifactMap = mapOf(                    // Inferred: Map<String, Artifact>
+            "wand" to Artifact("Magic Wand", 15),
+            "orb" to Artifact("Crystal Orb", 20)
+        )
+
+        // When explicit types are helpful:
+
+        // 1. When initializing with null
+        val nullableExplicit: Explorer? = null       // Must be explicit for nullable
+        // val nullableImplicit = null               // Error! Type cannot be inferred
+
+        // 2. When you want a more general type
+        val explicitList: List<Supernatural> = listOf(  // Want interface type, not concrete
+            Spirit("S1", 10, SpiritType.NEUTRAL),
+            // Could add other Supernatural implementations here
+        )
+
+        // 3. When the initialization is complex
+        val complexCalculation: Double = when {      // Makes intention clear
+            localInt > 40 -> localInt * 1.5
+            localInt > 20 -> localInt * 1.2
+            else -> localInt.toDouble()
+        }
+
+        // 4. Empty collections need explicit types or type parameters
+        val emptyExplicit: List<Artifact> = emptyList()
+        val emptyInferred = emptyList<Artifact>()   // Type parameter instead
+
+        // Type inference in lambdas
+        val spirits = listOf(
+            Spirit("C", 30, SpiritType.FRIENDLY),
+            Spirit("D", 40, SpiritType.HOSTILE)
+        )
+
+        // Parameter types inferred in lambda
+        val friendlySpirits = spirits.filter { it.spiritType == SpiritType.FRIENDLY }
+
+        // Explicit types in lambda (when needed for clarity)
+        val powerfulSpirits = spirits.filter { spirit: Spirit ->
+            spirit.powerLevel > 35
+        }
+
+        println("Type inference allows concise, readable code!")
+    }
+
+    /**
+     * Best practices for type declarations
+     */
+    fun demonstrateBestPractices() {
+        // ✅ GOOD: Type obvious from right side
+        val explorer = Explorer("Alice", 50, 90)
+        val room = RoomType.ATTIC
+
+        // ✅ GOOD: Explicit for public/important APIs
+        fun getMaxPowerLevel(): Int = 100
+
+        // ✅ GOOD: Explicit when type isn't obvious
+        val result: Boolean = performComplexCalculation()
+
+        // ❌ AVOID: Redundant explicit types for obvious cases
+        val obviousString: String = "Hello"  // The type is obvious
+
+        // ✅ GOOD: Explicit for nullable types
+        var currentSpirit: Spirit? = null
+
+        // Create spirits list for the chain operation example
+        val spirits = listOf(
+            Spirit("E", 30, SpiritType.FRIENDLY),
+            Spirit("F", 10, SpiritType.NEUTRAL),
+            Spirit("G", 40, SpiritType.HOSTILE)
+        )
+
+        // ✅ GOOD: Let inference work in chain operations
+        val names = spirits
+            .filter { it.powerLevel > 20 }
+            .map { it.name }
+            .sorted()
+        // Type inferred as List<String> through the chain
+    }
+
+    private fun performComplexCalculation() = Random.nextBoolean()
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// SECTION 11: THE HAUNTED HOUSE GAME - Putting It All Together!
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * The main game class that uses all the concepts we've learned!
+ */
+class HauntedHouseGame {
+    private var currentExplorer: Explorer? = null
+    private val house = HauntedHouse.createRandomHouse()
+    private val ghostDetector = GhostDetector()
+    private val dangerousExploration = DangerousExploration()
+
+    fun startGame(playerName: String) {
+        println("""
+            ╔════════════════════════════════════════════════════════╗
+            ║          WELCOME TO RAVENCROFT MANOR                  ║
+            ║        The Most Haunted House in Kotlin Valley        ║
+            ╚════════════════════════════════════════════════════════╝
+            
+            You are $playerName, a brave explorer seeking ancient artifacts.
+            Build your Power Level to ${ HauntedHouse.ESCAPE_THRESHOLD} to escape!
+            But beware... lose all your sanity, and the spirits claim you!
+            
+        """.trimIndent())
+
+        // Create explorer using data class
+        val explorer = Explorer(playerName)
+        currentExplorer = explorer
+
+        // Track the explorer (using companion object static method)
+        HauntedHouse.recordExplorer(explorer)
+
+        // Start exploring!
+        gameLoop()
+    }
+
+    private fun gameLoop() {
+        val explorer = currentExplorer ?: return
+
+        while (explorer.sanity > 0 && explorer.powerLevel < HauntedHouse.ESCAPE_THRESHOLD) {
+            println("\n════════════════════════════════════════")
+            println("📊 Status: Power=${explorer.powerLevel} | Sanity=${explorer.sanity}")
+            println("📍 Current Room: ${explorer.currentRoom}")
+            println("\nWhat would you like to do?")
+            println("1. Explore a new room")
+            println("2. Search for artifacts")
+            println("3. Use ghost detector")
+            println("4. Open mysterious box")
+            println("5. Read ancient scroll")
+            println("6. Perform ritual")
+            println("7. Check inventory")
+            println("8. Try to escape")
+
+            when(readLine()?.toIntOrNull()) {
+                1 -> exploreNewRoom(explorer)
+                2 -> searchForArtifacts(explorer)
+                3 -> useGhostDetector(explorer)
+                4 -> openBox(explorer)
+                5 -> readScroll(explorer)
+                6 -> performRitual(explorer)
+                7 -> checkInventory(explorer)
+                8 -> tryToEscape(explorer)
+                else -> println("Invalid choice!")
+            }
+
+            // Check win/lose conditions
+            if (explorer.sanity <= 0) {
+                println("\n💀 YOUR MIND SHATTERED! THE SPIRITS HAVE CLAIMED YOU!")
+                println("Final Power Level: ${explorer.powerLevel}")
+                break
+            }
+
+            if (HauntedHouse.canEscape(explorer.powerLevel)) {
+                println("\n🎉 CONGRATULATIONS! You've gained enough power to escape!")
+                println("You flee the haunted house with ${explorer.artifacts.size} artifacts!")
+                break
+            }
+        }
+    }
+
+    private fun exploreNewRoom(explorer: Explorer) {
+        val rooms = RoomType.values()
+        println("\nChoose a room to explore:")
+        rooms.forEachIndexed { index, room ->
+            val risk = if (room.isTooRisky(explorer.powerLevel)) " ⚠️ DANGEROUS!" else ""
+            println("${index + 1}. ${room.name} (Danger: ${room.dangerLevel})$risk")
+        }
+
+        val choice = readLine()?.toIntOrNull()?.minus(1)
+        if (choice != null && choice in rooms.indices) {
+            val room = rooms[choice]
+            println(explorer.explore(room))
+
+            // Random spirit encounter using interfaces
+            if (Random.nextDouble() < 0.4) {
+                val spirit = HauntedHouse.generateRandomSpirit()
+                println("\n${spirit.materialize()}")
+                println(spirit.interact(explorer))
+            }
+        }
+    }
+
+    private fun searchForArtifacts(explorer: Explorer) {
+        println("\n🔍 Searching for artifacts...")
+
+        if (Random.nextDouble() < 0.6) {
+            val artifact = Artifact(
+                name = listOf("Ancient Tome", "Mystic Gem", "Bone Chalice", "Silver Mirror").random(),
+                power = Random.nextInt(5, 25),
+                isCursed = Random.nextDouble() < 0.3
+            )
+
+            explorer.artifacts.add(artifact)
+            explorer.gainPower(artifact.power)
+
+            val cursedWarning = if (artifact.isCursed) " ⚠️ It's cursed!" else ""
+            println("Found: $artifact$cursedWarning")
+
+            if (artifact.isCursed) {
+                explorer.loseSanity(5)
+            }
+        } else {
+            println("You found nothing but dust and cobwebs...")
+        }
+    }
+
+    private fun useGhostDetector(explorer: Explorer) {
+        val room = Room(explorer.currentRoom, HauntedHouse.generateRandomSpirit())
+        val detected = ghostDetector.scanRoom(room)
+
+        println(ghostDetector.getDetectionReport())
+
+        detected?.let { spirit ->
+            println("\nThe spirit interacts with you!")
+            println(spirit.interact(explorer))
+        }
+    }
+
+    private fun openBox(explorer: Explorer) {
+        val result = dangerousExploration.openMysteriousBox(explorer)
+        println(result)
+    }
+
+    private fun readScroll(explorer: Explorer) {
+        println("\n📜 Attempting to read the ancient scroll...")
+        val power = dangerousExploration.readAncientScroll()
+        if (power > 0) {
+            explorer.gainPower(power)
+            println("The scroll granted you $power power!")
+        } else {
+            println("The scroll was too damaged to read...")
+        }
+    }
+
+    private fun performRitual(explorer: Explorer) {
+        println("\n🕯️ Attempting to perform the ritual...")
+        val result = dangerousExploration.performRitual(explorer)
+
+        result.fold(
+            onSuccess = { message -> println(message) },
+            onFailure = { exception ->
+                println("Ritual failed: ${exception.message}")
+                explorer.loseSanity(10)
+            }
+        )
+    }
+
+    private fun checkInventory(explorer: Explorer) {
+        println("\n🎒 Your Inventory:")
+        if (explorer.artifacts.isEmpty()) {
+            println("Empty - find some artifacts!")
+        } else {
+            explorer.artifacts.forEachIndexed { index, artifact ->
+                println("${index + 1}. $artifact")
+            }
+            println("Total artifacts: ${explorer.artifacts.size}")
+        }
+    }
+
+    private fun tryToEscape(explorer: Explorer) {
+        println("\n🚪 Attempting to escape...")
+        if (HauntedHouse.canEscape(explorer.powerLevel)) {
+            println("SUCCESS! You have enough power to break free!")
+        } else {
+            val needed = HauntedHouse.ESCAPE_THRESHOLD - explorer.powerLevel
+            println("Not enough power! You need $needed more power to escape.")
+            println("The house won't let you leave... yet.")
+            explorer.loseSanity(3)
+        }
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// LAB EXERCISES - Test Your Knowledge!
+// ═══════════════════════════════════════════════════════════════════════
+
+/**
+ * EXERCISE SECTION
+ * Complete these exercises to master the concepts!
+ */
+
+fun main() {
+    println("""
+        ╔══════════════════════════════════════════════════════════╗
+        ║            KOTLIN HAUNTED HOUSE LAB WORKBOOK            ║
+        ║                Choose Your Adventure:                    ║
+        ║                                                          ║
+        ║  1. Play the Haunted House Game                        ║
+        ║  2. Run Concept Demonstrations                          ║
+        ║  3. Complete Lab Exercises                             ║
+        ╚══════════════════════════════════════════════════════════╝
+    """.trimIndent())
+
+    println("\nEnter your choice (1-3):")
+
+    when(readLine()?.toIntOrNull()) {
+        1 -> {
+            println("Enter your explorer name:")
+            val name = readLine() ?: "Unknown Explorer"
+            HauntedHouseGame().startGame(name)
+        }
+        2 -> runDemonstrations()
+        3 -> runExercises()
+        else -> println("Invalid choice! The spirits are displeased...")
+    }
+}
+
+fun runDemonstrations() {
+    println("\n=== RUNNING ALL CONCEPT DEMONSTRATIONS ===\n")
+
+    // 1. Enum demonstration
+    println("ENUM DEMONSTRATION:")
+    RoomType.values().forEach { room ->
+        println("${room.name}: Danger=${room.dangerLevel}, MaxPower=${room.maxPowerGain}")
+    }
+
+    // 2. Data class demonstration
+    println("\nDATA CLASS DEMONSTRATION:")
+    val explorer1 = Explorer("Alice", 50, 90)
+    val explorer2 = explorer1.copy(name = "Bob")
+    println("Explorer 1: $explorer1")  // Auto-generated toString()
+    println("Explorer 2: $explorer2")
+    println("Are they equal? ${explorer1 == explorer2}")  // Auto-generated equals()
+
+    // 3. Interface demonstration
+    println("\nINTERFACE DEMONSTRATION:")
+    val spirit = Spirit("Casper", 30, SpiritType.FRIENDLY)
+    println(spirit.materialize())
+
+    // 4. Companion object demonstration
+    println("\nCOMPANION OBJECT DEMONSTRATION:")
+    val randomSpirit = HauntedHouse.generateRandomSpirit()
+    println("Random spirit created: $randomSpirit")
+    println("Can escape with 100 power? ${HauntedHouse.canEscape(100)}")
+
+    // 5. Nullable types demonstration
+    println("\nNULLABLE TYPES DEMONSTRATION:")
+    val detector = GhostDetector()
+    println(detector.getDetectionReport())
+
+    // 6. Try-catch demonstration
+    println("\nTRY-CATCH DEMONSTRATION:")
+    val dangerDemo = DangerousExploration()
+    val testExplorer = Explorer("Test", 50, 100)
+    println(dangerDemo.openMysteriousBox(testExplorer))
+
+    // 7. Copying demonstrations
+    val copyDemo = CopyingDemo()
+    copyDemo.demonstrateShallowCopy()
+    copyDemo.demonstrateDeepCopy()
+
+    // 8. Reference demonstrations
+    val refDemo = ReferenceDemo()
+    refDemo.explorersShareArtifact()
+    refDemo.demonstrateReferenceSemantics()
+    refDemo.demonstrateCollectionReferences()
+
+    // 9. Type inference demonstration
+    val typeDemo = TypeDeclarationDemo()
+    typeDemo.demonstrateTypeInference()
+}
+
+fun runExercises() {
+    println("""
+        ╔══════════════════════════════════════════════════════════╗
+        ║                    LAB EXERCISES                        ║
+        ╚══════════════════════════════════════════════════════════╝
+        
+        Complete these exercises in your IDE:
+        
+        EXERCISE 1: ENUMS
+        Create an enum called 'TrapType' with at least 3 different traps.
+        Each trap should have a 'damage' property and a 'trigger()' method.
+        
+        EXERCISE 2: DATA CLASSES
+        Create a data class 'Spell' with properties: name, manaCost, damage.
+        Create two spell instances and test the auto-generated methods.
+        
+        EXERCISE 3: INTERFACES
+        Create an interface 'Enchantable' with methods 'enchant()' and 'disenchant()'.
+        Implement this interface in a new 'EnchantedWeapon' class.
+        
+        EXERCISE 4: COMPANION OBJECTS
+        Add a companion object to the Spell class with:
+        - A constant MAX_MANA = 100
+        - A factory method createRandomSpell()
+        
+        EXERCISE 5: NULLABLE TYPES
+        Write a function that takes a nullable Spirit parameter and:
+        - Returns the spirit's name if not null
+        - Returns "No spirit" using the Elvis operator if null
+        
+        EXERCISE 6: TRY-CATCH
+        Create a function that randomly throws one of three custom exceptions.
+        Handle each exception differently using try-catch.
+        
+        EXERCISE 7: DEEP COPY
+        Create a function that performs a deep copy of an Explorer,
+        ensuring all nested mutable collections are also copied.
+        
+        EXERCISE 8: TYPE INFERENCE
+        Create examples showing when to use explicit vs implicit typing.
+        Include: local variables, function returns, and nullable types.
+        
+        BONUS CHALLENGE:
+        Extend the game with a new feature that uses at least 5 of the
+        concepts covered in this lab. Ideas:
+        - Spell casting system
+        - Trading with ghost merchants
+        - Puzzle rooms with riddles
+        - Boss battle system
+        
+        Good luck, brave explorer! May your code compile on the first try! 👻
+    """.trimIndent())
+}
+
+/**
+ * 🎃 CONGRATULATIONS! 🎃
+ *
+ * You've completed the Haunted House Kotlin Lab Workbook!
+ *
+ * You've learned:
+ * ✅ Static Members and Companion Objects
+ * ✅ Data Classes with auto-generated methods
+ * ✅ Interfaces for polymorphic behavior
+ * ✅ Enums for fixed sets of constants
+ * ✅ equals() and copy() methods
+ * ✅ Try-catch blocks for exception handling
+ * ✅ Deep vs Shallow copying
+ * ✅ Pass by reference and shared references
+ * ✅ Nullable types and the Elvis operator
+ * ✅ Explicit vs Implicit type declarations
+ *
+ * Remember: In Kotlin, like in haunted houses,
+ * things aren't always what they seem at first glance!
+ *
+ * Happy Coding! 🦇
+ */
