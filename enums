@@ -1,0 +1,532 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ENUMS IN KOTLIN - TRAFFIC LIGHT CONTROL SYSTEM
+ * 
+ * A simple, complete example showing how enums are more than just constants.
+ * They're full classes that can have properties, methods, and implement interfaces!
+ * 
+ * Scenario: Traffic light management system for a smart city
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+import kotlin.random.Random
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * BASIC ENUM - Simple Traffic Light States
+ * 
+ * At its simplest, an enum is a fixed set of constants
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+enum class SimpleTrafficLight {
+    RED,      // Stop
+    YELLOW,   // Caution
+    GREEN     // Go
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ADVANCED ENUM - Traffic Light with Properties and Methods
+ * 
+ * Enums in Kotlin can have:
+ * - Constructor parameters (properties)
+ * - Methods
+ * - Abstract methods that each constant must implement
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+enum class TrafficLight(
+    val colorCode: String,      // Hex color for UI display
+    val durationSeconds: Int,    // How long this light stays on
+    val action: String,          // What drivers should do
+    val canTurn: Boolean        // Can vehicles turn right?
+) {
+    // Each enum constant provides values for ALL constructor parameters
+    RED(
+        colorCode = "#FF0000",
+        durationSeconds = 60,
+        action = "STOP - No vehicle movement allowed",
+        canTurn = false
+    ),
+    
+    YELLOW(
+        colorCode = "#FFFF00", 
+        durationSeconds = 5,
+        action = "CAUTION - Prepare to stop",
+        canTurn = false
+    ),
+    
+    GREEN(
+        colorCode = "#00FF00",
+        durationSeconds = 45,
+        action = "GO - Proceed with caution",
+        canTurn = true
+    ),
+    
+    FLASHING_YELLOW(
+        colorCode = "#FFFF00",
+        durationSeconds = 2,
+        action = "CAUTION - Yield and proceed carefully",
+        canTurn = true
+    ),
+    
+    FLASHING_RED(
+        colorCode = "#FF0000",
+        durationSeconds = 2,
+        action = "STOP - Then proceed when safe (like stop sign)",
+        canTurn = true
+    );  // <-- Note the semicolon! Required before adding methods
+    
+    /**
+     * ENUM METHODS - All constants share these methods
+     */
+    
+    // Check if vehicles must stop
+    fun requiresFullStop(): Boolean {
+        return this == RED || this == FLASHING_RED
+    }
+    
+    // Get next light in normal sequence
+    fun getNextLight(): TrafficLight {
+        return when(this) {
+            RED -> GREEN
+            GREEN -> YELLOW
+            YELLOW -> RED
+            FLASHING_YELLOW -> FLASHING_YELLOW  // Stays flashing
+            FLASHING_RED -> FLASHING_RED        // Stays flashing
+        }
+    }
+    
+    // Check if this is an emergency/night mode
+    fun isFlashingMode(): Boolean {
+        return this == FLASHING_YELLOW || this == FLASHING_RED
+    }
+    
+    // Get pedestrian signal based on traffic light
+    fun getPedestrianSignal(): String {
+        return when(this) {
+            GREEN -> "WALK 🚶"
+            YELLOW -> "DON'T WALK - Flashing ✋"
+            RED -> "DON'T WALK ✋"
+            FLASHING_YELLOW -> "CROSS WITH CAUTION ⚠️"
+            FLASHING_RED -> "DON'T WALK ✋"
+        }
+    }
+    
+    // Display current state with emoji
+    fun display(): String {
+        val emoji = when(this) {
+            RED, FLASHING_RED -> "🔴"
+            YELLOW, FLASHING_YELLOW -> "🟡"
+            GREEN -> "🟢"
+        }
+        return "$emoji $name: $action"
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ENUM WITH ABSTRACT METHODS
+ * 
+ * Each constant must provide its own implementation!
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+enum class IntersectionType(val description: String) {
+    
+    FOUR_WAY("Standard 4-way intersection") {
+        // Each constant implements this differently
+        override fun getTrafficPattern(): String {
+            return "North-South: 60s, East-West: 60s, All-Red: 3s"
+        }
+        
+        override fun calculateCycleTime(): Int = 123  // seconds
+    },
+    
+    T_JUNCTION("T-shaped intersection") {
+        override fun getTrafficPattern(): String {
+            return "Main road: 90s, Side road: 30s, All-Red: 2s"
+        }
+        
+        override fun calculateCycleTime(): Int = 122
+    },
+    
+    ROUNDABOUT("Traffic circle") {
+        override fun getTrafficPattern(): String {
+            return "Continuous flow - Yield to traffic in circle"
+        }
+        
+        override fun calculateCycleTime(): Int = 0  // No cycle!
+    },
+    
+    PEDESTRIAN_CROSSING("Pedestrian-activated crossing") {
+        override fun getTrafficPattern(): String {
+            return "Green until button pressed, then 30s pedestrian phase"
+        }
+        
+        override fun calculateCycleTime(): Int = 30
+    };
+    
+    // Abstract methods - EVERY constant must implement these
+    abstract fun getTrafficPattern(): String
+    abstract fun calculateCycleTime(): Int
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ENUM IMPLEMENTING INTERFACE
+ * 
+ * Enums can implement interfaces just like regular classes!
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+interface Controllable {
+    fun activate()
+    fun deactivate()
+    fun getStatus(): String
+}
+
+enum class EmergencyMode(
+    val priority: Int,
+    val overrideNormal: Boolean
+) : Controllable {
+    
+    NORMAL(0, false) {
+        override fun activate() {
+            println("✅ Normal traffic mode activated")
+        }
+        
+        override fun deactivate() {
+            println("Normal mode cannot be deactivated")
+        }
+        
+        override fun getStatus() = "Traffic flowing normally"
+    },
+    
+    EMERGENCY_VEHICLE(10, true) {
+        override fun activate() {
+            println("🚨 EMERGENCY VEHICLE APPROACHING - All lights to RED!")
+        }
+        
+        override fun deactivate() {
+            println("Emergency vehicle passed - Resuming normal flow")
+        }
+        
+        override fun getStatus() = "Emergency vehicle priority active"
+    },
+    
+    EVACUATION(20, true) {
+        override fun activate() {
+            println("⚠️ EVACUATION MODE - All outbound routes GREEN!")
+        }
+        
+        override fun deactivate() {
+            println("Evacuation ended - Restoring normal patterns")
+        }
+        
+        override fun getStatus() = "City evacuation in progress"
+    },
+    
+    MAINTENANCE(5, true) {
+        override fun activate() {
+            println("🔧 Maintenance mode - All lights FLASHING YELLOW")
+        }
+        
+        override fun deactivate() {
+            println("Maintenance complete - Normal operation resumed")
+        }
+        
+        override fun getStatus() = "Traffic light under maintenance"
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * TRAFFIC CONTROLLER CLASS - Uses the Enums
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+class TrafficController(
+    private val intersectionId: String,
+    private val type: IntersectionType
+) {
+    private var currentLight = TrafficLight.RED
+    private var emergencyMode = EmergencyMode.NORMAL
+    private var cycleCount = 0
+    
+    /**
+     * Simulate one traffic light cycle
+     */
+    fun runCycle() {
+        cycleCount++
+        println("\n🚦 Intersection $intersectionId (${type.description})")
+        println("Cycle #$cycleCount - Pattern: ${type.getTrafficPattern()}")
+        
+        // Check for emergency mode
+        if (emergencyMode != EmergencyMode.NORMAL) {
+            println("⚠️ OVERRIDE: ${emergencyMode.getStatus()}")
+            handleEmergencyMode()
+            return
+        }
+        
+        // Normal traffic flow
+        println("Current: ${currentLight.display()}")
+        println("Duration: ${currentLight.durationSeconds} seconds")
+        println("Pedestrian Signal: ${currentLight.getPedestrianSignal()}")
+        println("Right Turn Allowed: ${if (currentLight.canTurn) "✅ Yes" else "❌ No"}")
+        
+        // Transition to next light
+        val nextLight = currentLight.getNextLight()
+        println("Next: $nextLight in ${currentLight.durationSeconds}s")
+        
+        currentLight = nextLight
+    }
+    
+    /**
+     * Handle special emergency modes
+     */
+    private fun handleEmergencyMode() {
+        when(emergencyMode) {
+            EmergencyMode.EMERGENCY_VEHICLE -> {
+                currentLight = TrafficLight.RED
+                println("All lights: RED - Emergency vehicle passing")
+            }
+            EmergencyMode.EVACUATION -> {
+                currentLight = TrafficLight.GREEN
+                println("Outbound routes: GREEN - Evacuation in progress")
+            }
+            EmergencyMode.MAINTENANCE -> {
+                currentLight = TrafficLight.FLASHING_YELLOW
+                println("All lights: FLASHING YELLOW - Proceed with caution")
+            }
+            EmergencyMode.NORMAL -> {
+                // Already handled above
+            }
+        }
+    }
+    
+    /**
+     * Set emergency mode
+     */
+    fun setEmergencyMode(mode: EmergencyMode) {
+        emergencyMode.deactivate()
+        emergencyMode = mode
+        emergencyMode.activate()
+    }
+    
+    /**
+     * Get statistics
+     */
+    fun getStatistics(): String {
+        return """
+            📊 Traffic Controller Statistics
+            Intersection: $intersectionId
+            Type: ${type.name} - ${type.description}
+            Full Cycle Time: ${type.calculateCycleTime()}s
+            Current Light: ${currentLight.name}
+            Emergency Mode: ${emergencyMode.name}
+            Cycles Completed: $cycleCount
+        """.trimIndent()
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MAIN DEMONSTRATION
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+fun main() {
+    println("╔════════════════════════════════════════════════════════════════╗")
+    println("║        ENUM DEMONSTRATION - TRAFFIC CONTROL SYSTEM            ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: Basic Enum Usage
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 1: Basic Enum Usage ═══\n")
+    
+    // Simple enum
+    val simpleLight = SimpleTrafficLight.RED
+    println("Simple enum: $simpleLight")
+    
+    // Comparing enums
+    if (simpleLight == SimpleTrafficLight.RED) {
+        println("Light is RED - Vehicles must stop!")
+    }
+    
+    // Enum in when expression (exhaustive - compiler knows all cases)
+    val instruction = when(simpleLight) {
+        SimpleTrafficLight.RED -> "Stop"
+        SimpleTrafficLight.YELLOW -> "Caution"
+        SimpleTrafficLight.GREEN -> "Go"
+        // No else needed - all cases covered!
+    }
+    println("Instruction: $instruction")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: Enum Properties and Methods
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 2: Enum with Properties & Methods ═══\n")
+    
+    val trafficLight = TrafficLight.GREEN
+    
+    // Access properties
+    println("Light: ${trafficLight.name}")  // Built-in property
+    println("Color Code: ${trafficLight.colorCode}")
+    println("Duration: ${trafficLight.durationSeconds}s")
+    println("Action: ${trafficLight.action}")
+    println("Can Turn: ${trafficLight.canTurn}")
+    
+    // Use methods
+    println("\nMethod calls:")
+    println("Requires Stop? ${trafficLight.requiresFullStop()}")
+    println("Next Light: ${trafficLight.getNextLight()}")
+    println("Is Flashing? ${trafficLight.isFlashingMode()}")
+    println("Display: ${trafficLight.display()}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: Iterating Over Enum Values
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 3: All Traffic Light States ═══\n")
+    
+    // values() returns array of all constants
+    println("All traffic light states:")
+    TrafficLight.values().forEach { light ->
+        println("  ${light.display()}")
+        println("    Duration: ${light.durationSeconds}s")
+        println("    Pedestrian: ${light.getPedestrianSignal()}")
+        println()
+    }
+    
+    // Find total cycle time
+    val normalLights = listOf(TrafficLight.RED, TrafficLight.GREEN, TrafficLight.YELLOW)
+    val totalCycleTime = normalLights.sumOf { it.durationSeconds }
+    println("Total normal cycle time: ${totalCycleTime}s")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 4: Enum with Abstract Methods
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 4: Intersection Types (Abstract Methods) ═══\n")
+    
+    IntersectionType.values().forEach { intersection ->
+        println("${intersection.name}:")
+        println("  Description: ${intersection.description}")
+        println("  Pattern: ${intersection.getTrafficPattern()}")
+        println("  Cycle Time: ${intersection.calculateCycleTime()}s")
+        println()
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 5: Enum Implementing Interface
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 5: Emergency Modes (Interface Implementation) ═══\n")
+    
+    // Test each emergency mode
+    EmergencyMode.values().forEach { mode ->
+        println("Testing ${mode.name} (Priority: ${mode.priority}):")
+        mode.activate()
+        println("  Status: ${mode.getStatus()}")
+        mode.deactivate()
+        println()
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 6: valueOf() and Enum Parsing
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 6: Getting Enum by Name ═══\n")
+    
+    // Get enum by string name
+    val lightName = "YELLOW"
+    val lightFromString = TrafficLight.valueOf(lightName)
+    println("Light from string '$lightName': ${lightFromString.display()}")
+    
+    // Safe parsing with enumValueOf (doesn't throw exception)
+    fun parseTrafficLight(name: String): TrafficLight? {
+        return try {
+            TrafficLight.valueOf(name.uppercase())
+        } catch (e: IllegalArgumentException) {
+            null
+        }
+    }
+    
+    println("\nSafe parsing:")
+    println("'red' -> ${parseTrafficLight("red")?.display()}")
+    println("'BLUE' -> ${parseTrafficLight("BLUE")?.display() ?: "Invalid light"}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 7: Complete Traffic System Simulation
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 7: Traffic Control System Simulation ═══\n")
+    
+    // Create controllers for different intersections
+    val mainStreet = TrafficController("MAIN-01", IntersectionType.FOUR_WAY)
+    val schoolCrossing = TrafficController("SCHOOL-01", IntersectionType.PEDESTRIAN_CROSSING)
+    
+    // Normal operation
+    println("=== NORMAL OPERATION ===")
+    mainStreet.runCycle()
+    
+    // Simulate emergency
+    println("\n=== EMERGENCY VEHICLE APPROACHING ===")
+    mainStreet.setEmergencyMode(EmergencyMode.EMERGENCY_VEHICLE)
+    mainStreet.runCycle()
+    
+    // Return to normal
+    println("\n=== RETURNING TO NORMAL ===")
+    mainStreet.setEmergencyMode(EmergencyMode.NORMAL)
+    mainStreet.runCycle()
+    
+    // Show statistics
+    println("\n${mainStreet.getStatistics()}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 8: Enum Ordinal and Comparison
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 8: Enum Ordinal & Comparison ═══\n")
+    
+    // Ordinal = position in enum declaration (0-based)
+    TrafficLight.values().forEach { light ->
+        println("${light.name}: ordinal = ${light.ordinal}")
+    }
+    
+    // Enums are comparable by ordinal
+    val light1 = TrafficLight.RED      // ordinal 0
+    val light2 = TrafficLight.GREEN    // ordinal 2
+    
+    println("\nComparison:")
+    println("RED < GREEN? ${light1 < light2}")  // true
+    println("RED ordinal: ${light1.ordinal}, GREEN ordinal: ${light2.ordinal}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ SUMMARY: Enum Power Features ═══")
+    println("""
+        
+        Enums in Kotlin are NOT just constants! They can have:
+        
+        1. PROPERTIES - Each constant can store data
+           Example: TrafficLight.RED has colorCode, duration, etc.
+        
+        2. METHODS - Shared behavior across all constants
+           Example: requiresFullStop(), getNextLight()
+        
+        3. ABSTRACT METHODS - Each constant implements differently
+           Example: IntersectionType's getTrafficPattern()
+        
+        4. INTERFACE IMPLEMENTATION - Enums can implement interfaces
+           Example: EmergencyMode implements Controllable
+        
+        5. BUILT-IN FEATURES:
+           - name: String name of constant
+           - ordinal: Position in declaration
+           - values(): Array of all constants
+           - valueOf(name): Get constant by name
+        
+        When to use Enums:
+        ✅ Fixed set of constants (traffic lights, days, states)
+        ✅ Type-safe constants with behavior
+        ✅ When you need exhaustive when expressions
+        ✅ State machines and finite state systems
+        
+        Enums make your code safer, cleaner, and more maintainable!
+        
+    """.trimIndent())
+}
