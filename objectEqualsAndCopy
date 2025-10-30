@@ -1,0 +1,239 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * EQUALS() AND COPY() METHODS - ESSENTIAL DEMO
+ * 
+ * This minimal example focuses ONLY on understanding:
+ * 1. How equals() compares objects by CONTENT not REFERENCE
+ * 2. How copy() creates new objects with modified values
+ * 
+ * Theme: Student Records System
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * REGULAR CLASS - Manual Implementation
+ * This shows what you'd have to write WITHOUT data class
+ */
+class RegularStudent(
+    val id: Int,
+    val name: String,
+    var grade: Int
+) {
+    /**
+     * MANUALLY WRITTEN equals()
+     * This is what data class generates automatically!
+     */
+    override fun equals(other: Any?): Boolean {
+        // Step 1: Are they the same object in memory?
+        if (this === other) return true
+        
+        // Step 2: Is other null or different type?
+        if (other !is RegularStudent) return false
+        
+        // Step 3: Compare each property
+        return id == other.id && 
+               name == other.name && 
+               grade == other.grade
+    }
+    
+    /**
+     * MANUALLY WRITTEN copy()
+     * Creates a new object with option to change values
+     */
+    fun copy(
+        id: Int = this.id,           // Default to current value
+        name: String = this.name,     // Default to current value
+        grade: Int = this.grade       // Default to current value
+    ): RegularStudent {
+        return RegularStudent(id, name, grade)
+    }
+    
+    override fun toString() = "RegularStudent(id=$id, name='$name', grade=$grade)"
+}
+
+/**
+ * DATA CLASS - Automatic Implementation
+ * Just add 'data' keyword and get equals() and copy() for FREE!
+ */
+data class Student(
+    val id: Int,
+    val name: String,
+    var grade: Int
+)
+// That's it! Kotlin generates equals(), copy(), toString(), hashCode(), componentN()
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * MAIN DEMONSTRATION - See the Methods in Action
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+fun main() {
+    println("╔════════════════════════════════════════════════════════════════╗")
+    println("║           EQUALS() AND COPY() METHODS DEMO                    ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: Understanding equals() - Content vs Reference
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 1: EQUALS() - Comparing Objects ═══\n")
+    
+    // Create two students with SAME data
+    val alice1 = Student(id = 101, name = "Alice", grade = 85)
+    val alice2 = Student(id = 101, name = "Alice", grade = 85)
+    
+    println("alice1: $alice1")
+    println("alice2: $alice2")
+    println()
+    
+    /**
+     * === checks REFERENCE equality (are they the same object in memory?)
+     * == checks CONTENT equality (do they have the same values?)
+     */
+    
+    // Reference check - Are they the same object in memory?
+    println("🔍 Reference Equality (=== operator):")
+    println("alice1 === alice2: ${alice1 === alice2}")  // FALSE - different objects!
+    println("↑ FALSE because they are two different objects in memory")
+    println()
+    
+    // Content check - Do they have the same values?
+    println("📊 Content Equality (== operator calls equals()):")
+    println("alice1 == alice2: ${alice1 == alice2}")    // TRUE - same content!
+    println("↑ TRUE because equals() compares the VALUES inside")
+    println()
+    
+    // Now with DIFFERENT data
+    val bob = Student(id = 102, name = "Bob", grade = 85)
+    println("bob: $bob")
+    println("alice1 == bob: ${alice1 == bob}")  // FALSE - different content
+    println("↑ FALSE because they have different id and name")
+    println()
+    
+    /**
+     * IMPORTANT: Without equals() override, == would only check references!
+     * Data classes automatically generate proper equals() that compares values
+     */
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: Understanding copy() - Creating Modified Copies
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 2: COPY() - Creating New Objects ═══\n")
+    
+    val originalStudent = Student(id = 201, name = "Charlie", grade = 75)
+    println("Original: $originalStudent")
+    println()
+    
+    /**
+     * copy() creates a NEW object (different reference)
+     * You can change any properties you want
+     * Properties you don't specify keep their original values
+     */
+    
+    // Example 1: Change just the grade
+    val improvedGrade = originalStudent.copy(grade = 95)
+    println("📝 Example 1 - Change one property:")
+    println("After studying hard...")
+    println("New object: $improvedGrade")
+    println("Original unchanged: $originalStudent")
+    println("Are they the same object? ${originalStudent === improvedGrade}")  // FALSE
+    println()
+    
+    // Example 2: Change multiple properties
+    val transferStudent = originalStudent.copy(
+        id = 202,      // New ID for transfer student
+        grade = 80     // Different grade
+    )  // name stays "Charlie"
+    println("🔄 Example 2 - Change multiple properties:")
+    println("Transfer student (new ID, same name):")
+    println("New object: $transferStudent")
+    println()
+    
+    // Example 3: Make exact copy (no changes)
+    val exactCopy = originalStudent.copy()  // No parameters = exact copy
+    println("📋 Example 3 - Exact copy:")
+    println("Exact copy: $exactCopy")
+    println("exactCopy == original: ${exactCopy == originalStudent}")     // TRUE (same content)
+    println("exactCopy === original: ${exactCopy === originalStudent}")   // FALSE (different object)
+    println()
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: Practical Use Cases
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 3: PRACTICAL USE CASES ═══\n")
+    
+    // Use Case 1: Finding duplicates in a list
+    val students = listOf(
+        Student(301, "David", 88),
+        Student(302, "Emma", 92),
+        Student(301, "David", 88),  // Duplicate!
+        Student(303, "Frank", 78)
+    )
+    
+    println("🔍 Finding Duplicates (using equals()):")
+    val firstStudent = students[0]
+    val duplicate = students[2]
+    
+    // This works because equals() compares content!
+    if (firstStudent == duplicate) {
+        println("Found duplicate: $firstStudent")
+    }
+    
+    // Remove duplicates using distinct() - uses equals() internally
+    val uniqueStudents = students.distinct()
+    println("Original list size: ${students.size}")
+    println("After removing duplicates: ${uniqueStudents.size}")
+    println()
+    
+    // Use Case 2: Updating records without mutation
+    println("📝 Updating Records (using copy()):")
+    val semester1 = Student(401, "Grace", 82)
+    println("Semester 1: $semester1")
+    
+    // Create new record for semester 2 with updated grade
+    val semester2 = semester1.copy(grade = 89)
+    println("Semester 2: $semester2")
+    println("Original preserved: $semester1")
+    println()
+    
+    // Use Case 3: Batch grade updates
+    println("📊 Batch Updates (using copy()):")
+    val classList = listOf(
+        Student(501, "Henry", 75),
+        Student(502, "Ivy", 80),
+        Student(503, "Jack", 85)
+    )
+    
+    // Give everyone 5 bonus points (creating new list)
+    val updatedGrades = classList.map { student ->
+        student.copy(grade = student.grade + 5)
+    }
+    
+    println("Original grades: ${classList.map { it.grade }}")
+    println("Updated grades:  ${updatedGrades.map { it.grade }}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ KEY TAKEAWAYS ═══")
+    println("""
+        
+        EQUALS() METHOD:
+        ✅ Compares object CONTENT, not memory location
+        ✅ == operator calls equals() method
+        ✅ === operator checks if same object in memory
+        ✅ Data classes auto-generate proper equals()
+        
+        COPY() METHOD:
+        ✅ Creates NEW object (different memory location)
+        ✅ Can change any/all/no properties
+        ✅ Original object remains unchanged
+        ✅ Data classes auto-generate copy() method
+        
+        REMEMBER:
+        • Use == to compare if two objects have same data
+        • Use === to check if two variables point to same object
+        • Use copy() to create modified versions without changing original
+        • Data classes give you both methods for FREE!
+        
+    """.trimIndent())
+}
