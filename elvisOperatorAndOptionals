@@ -1,0 +1,374 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * NULLABLE TYPES (?) AND ELVIS OPERATOR (?:) - VISUAL DEMONSTRATION
+ * 
+ * Kotlin's null safety prevents the #1 cause of crashes: NullPointerException
+ * 
+ * Key Symbols:
+ * ?  - Makes type nullable (can be null)
+ * ?. - Safe call (only calls if not null)
+ * ?: - Elvis operator (provides default for null)
+ * !! - Not-null assertion (dangerous - forces non-null)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * User Profile - Some fields might be missing
+ */
+data class UserProfile(
+    val id: Int,
+    val username: String,           // Required - cannot be null
+    val email: String?,              // Optional - can be null
+    val phoneNumber: String?,        // Optional - can be null
+    val profilePicture: String?,     // Optional - can be null
+    val bio: String?                 // Optional - can be null
+)
+
+/**
+ * Visual helper to show null safety in action
+ */
+fun displayNullSafety(label: String, value: String?, operation: String, result: String) {
+    println("""
+    ┌─── $label ───
+    │ Value: ${value ?: "null"} 
+    │ Operation: $operation
+    │ Result: $result
+    └${"─".repeat(45)}
+    """.trimIndent())
+}
+
+/**
+ * Show a user profile with visual formatting
+ */
+fun showProfile(user: UserProfile) {
+    println("""
+    ╔════════════════════════════════════════════╗
+    ║            USER PROFILE CARD               ║
+    ╠════════════════════════════════════════════╣
+    ║ ID: ${user.id}
+    ║ Username: ${user.username}
+    ║ Email: ${user.email ?: "❌ Not provided"}
+    ║ Phone: ${user.phoneNumber ?: "❌ Not provided"}
+    ║ Picture: ${user.profilePicture ?: "👤 Default avatar"}
+    ║ Bio: ${user.bio ?: "📝 No bio yet"}
+    ╚════════════════════════════════════════════╝
+    """.trimIndent())
+}
+
+fun main() {
+    println("╔════════════════════════════════════════════════════════════════╗")
+    println("║      NULLABLE TYPES (?) AND ELVIS OPERATOR (?:) DEMO         ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: Non-Nullable vs Nullable Types
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 1: NON-NULLABLE vs NULLABLE TYPES")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    // Non-nullable - CANNOT be null
+    val name: String = "Alice"
+    // val name2: String = null  // ❌ Won't compile!
+    
+    // Nullable - CAN be null
+    val nickname: String? = null
+    val email: String? = "alice@email.com"
+    
+    println("""
+    ┌─── Type System ───
+    │
+    │ String   = Cannot be null (guaranteed safe)
+    │ String?  = Can be null (needs null checks)
+    │
+    │ Examples:
+    │   val name: String = "Alice"      ✅ OK
+    │   val name: String = null         ❌ Won't compile
+    │
+    │   val nickname: String? = "Ally"  ✅ OK
+    │   val nickname: String? = null    ✅ OK
+    └──────────────────────────────────
+    """.trimIndent())
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: Safe Call Operator (?.)
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 2: SAFE CALL OPERATOR (?.) - Only Calls if Not Null")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    val message1: String? = "Hello World"
+    val message2: String? = null
+    
+    // Safe call - returns null if object is null
+    val length1 = message1?.length
+    val length2 = message2?.length
+    
+    displayNullSafety(
+        "Safe Call on Non-Null",
+        message1,
+        "message?.length",
+        "Returns: $length1"
+    )
+    
+    displayNullSafety(
+        "Safe Call on Null",
+        message2,
+        "message?.length",
+        "Returns: $length2 (null)"
+    )
+    
+    // Chaining safe calls
+    val user1: UserProfile? = UserProfile(1, "Bob", "bob@email.com", null, null, null)
+    val user2: UserProfile? = null
+    
+    val emailLength1 = user1?.email?.length
+    val emailLength2 = user2?.email?.length
+    
+    println("\n🔗 Chaining Safe Calls:")
+    println("   user1?.email?.length = $emailLength1")
+    println("   user2?.email?.length = $emailLength2 (user is null)")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: Elvis Operator (?:) - Default Values
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 3: ELVIS OPERATOR (?:) - Provides Default for Null")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    val userWithData = UserProfile(
+        id = 1,
+        username = "charlie",
+        email = "charlie@email.com",
+        phoneNumber = "+1234567890",
+        profilePicture = "charlie.jpg",
+        bio = "Love coding!"
+    )
+    
+    val userMissingData = UserProfile(
+        id = 2,
+        username = "diana",
+        email = null,
+        phoneNumber = null,
+        profilePicture = null,
+        bio = null
+    )
+    
+    println("\n👤 User WITH Data:")
+    showProfile(userWithData)
+    
+    println("\n👤 User WITH Missing Data (Elvis provides defaults):")
+    showProfile(userMissingData)
+    
+    // More Elvis examples
+    println("\n🎯 Elvis Operator Examples:")
+    
+    val nullString: String? = null
+    val nonNullString: String? = "Kotlin"
+    
+    println("""
+    ┌─── Elvis Magic ───
+    │
+    │ value ?: default
+    │
+    │ If value is null → use default
+    │ If value is not null → use value
+    │
+    │ Examples:
+    │   null ?: "Default"     = "${nullString ?: "Default"}"
+    │   "Kotlin" ?: "Default" = "${nonNullString ?: "Default"}"
+    └──────────────────────────────────
+    """.trimIndent())
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 4: Combining Safe Call with Elvis
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 4: COMBINING ?. AND ?: FOR POWERFUL NULL HANDLING")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    val users = listOf(
+        UserProfile(3, "eve", "eve@mail.com", null, null, "Gamer"),
+        UserProfile(4, "frank", null, "+9999999", null, null),
+        UserProfile(5, "grace", null, null, null, null)
+    )
+    
+    println("\n📊 Processing User List:")
+    users.forEach { user ->
+        // Complex null handling in one line!
+        val contactInfo = user.email?.uppercase() ?: user.phoneNumber ?: "NO CONTACT INFO"
+        val displayName = user.bio?.take(10) ?: "User #${user.id}"
+        
+        println("""
+        ┌─── ${user.username} ───
+        │ Contact: $contactInfo
+        │ Display: $displayName
+        └──────────────────────
+        """.trimIndent())
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 5: Let with Null Check
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 5: LET WITH NULL CHECK - Execute Block if Not Null")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    fun processEmail(email: String?) {
+        println("\n📧 Processing: ${email ?: "null"}")
+        
+        // Only executes if email is not null
+        email?.let { validEmail ->
+            println("   ✅ Sending welcome email to: $validEmail")
+            println("   ✅ Email length: ${validEmail.length} characters")
+            println("   ✅ Domain: ${validEmail.substringAfter('@')}")
+        } ?: println("   ❌ No email to process")
+    }
+    
+    processEmail("henry@company.com")
+    processEmail(null)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 6: Smart Casting
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 6: SMART CASTING - After Null Check")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    fun greetUser(name: String?) {
+        if (name != null) {
+            // Inside this block, name is automatically cast to non-null String
+            println("👋 Hello, ${name.uppercase()}!")  // No ? needed!
+            println("   Your name has ${name.length} letters")
+        } else {
+            println("👋 Hello, Guest!")
+        }
+    }
+    
+    println("\n🎯 Smart Casting Demo:")
+    greetUser("Isabella")
+    greetUser(null)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 7: The Dangerous !! Operator
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 7: THE !! OPERATOR - Use with EXTREME Caution!")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    println("""
+    ⚠️ WARNING: The !! operator forces a nullable to non-null
+    If the value is actually null, it will CRASH with NullPointerException!
+    
+    Example:
+    val dangerous: String? = null
+    val length = dangerous!!.length  // 💥 CRASH! NPE!
+    
+    ONLY use !! when you're 100% certain the value isn't null
+    Better alternatives: ?., ?:, let, or null checks
+    """.trimIndent())
+    
+    // Safe demonstration
+    val definitelyNotNull: String? = "I promise I'm not null"
+    val forced = definitelyNotNull!!.length  // OK, but still risky
+    println("\n   Forced non-null: $forced characters")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 8: Real-World Example - Form Validation
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══════════════════════════════════════════════════════════════")
+    println("  PART 8: REAL-WORLD EXAMPLE - Form Validation")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    data class RegistrationForm(
+        val username: String?,
+        val email: String?,
+        val password: String?,
+        val confirmPassword: String?
+    )
+    
+    fun validateForm(form: RegistrationForm): List<String> {
+        val errors = mutableListOf<String>()
+        
+        // Using Elvis for validation messages
+        form.username ?: errors.add("❌ Username is required")
+        form.email ?: errors.add("❌ Email is required")
+        form.password ?: errors.add("❌ Password is required")
+        
+        // Using safe call for length check
+        form.username?.let {
+            if (it.length < 3) errors.add("❌ Username too short")
+        }
+        
+        // Complex validation with safe calls
+        if (form.password != null && form.confirmPassword != null) {
+            if (form.password != form.confirmPassword) {
+                errors.add("❌ Passwords don't match")
+            }
+        }
+        
+        return errors
+    }
+    
+    val validForm = RegistrationForm(
+        username = "jack",
+        email = "jack@email.com",
+        password = "secret123",
+        confirmPassword = "secret123"
+    )
+    
+    val invalidForm = RegistrationForm(
+        username = null,
+        email = "kate@email.com",
+        password = "pass",
+        confirmPassword = null
+    )
+    
+    println("\n📝 Valid Form:")
+    val validErrors = validateForm(validForm)
+    if (validErrors.isEmpty()) {
+        println("   ✅ Form is valid!")
+    } else {
+        validErrors.forEach { println("   $it") }
+    }
+    
+    println("\n📝 Invalid Form:")
+    val invalidErrors = validateForm(invalidForm)
+    if (invalidErrors.isEmpty()) {
+        println("   ✅ Form is valid!")
+    } else {
+        invalidErrors.forEach { println("   $it") }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n╔════════════════════════════════════════════════════════════════╗")
+    println("║                     NULL SAFETY CHEAT SHEET                   ║")
+    println("╠════════════════════════════════════════════════════════════════╣")
+    println("║                                                                ║")
+    println("║  NULLABLE TYPE (?):                                           ║")
+    println("║    String?  → Can be null                                     ║")
+    println("║    String   → Cannot be null                                  ║")
+    println("║                                                                ║")
+    println("║  SAFE CALL (?.):                                              ║")
+    println("║    value?.method()  → Calls only if value not null            ║")
+    println("║    Returns null if value is null                              ║")
+    println("║                                                                ║")
+    println("║  ELVIS OPERATOR (?:):                                         ║")
+    println("║    value ?: default  → Use default if value is null           ║")
+    println("║    Perfect for providing fallback values                      ║")
+    println("║                                                                ║")
+    println("║  LET WITH NULL CHECK:                                         ║")
+    println("║    value?.let { /* use it */ }  → Execute if not null        ║")
+    println("║                                                                ║")
+    println("║  SMART CASTING:                                               ║")
+    println("║    if (value != null) { /* value is non-null here */ }        ║")
+    println("║                                                                ║")
+    println("║  NOT-NULL ASSERTION (!!):                                     ║")
+    println("║    value!!  → Forces non-null (DANGEROUS!)                    ║")
+    println("║    Throws NPE if actually null                                ║")
+    println("║                                                                ║")
+    println("║  REMEMBER: Null safety prevents crashes at compile time!      ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+}
