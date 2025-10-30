@@ -1,0 +1,816 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * KOTLIN COMPANION OBJECTS & STATIC MEMBERS - BOOKSTORE EXAMPLE
+ * 
+ * This comprehensive example demonstrates all aspects of companion objects
+ * using a real-world bookstore management system.
+ * 
+ * Topics Covered:
+ * - Companion objects as replacements for static members
+ * - Factory methods and builder patterns
+ * - Static constants and properties
+ * - Singleton pattern integration
+ * - Interface implementation in companion objects
+ * - Named companion objects
+ * - Companion object extensions
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.random.Random
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PART 1: Basic Companion Object - Book Class
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Book class demonstrating basic companion object usage
+ * Companion object handles book creation, validation, and tracking
+ */
+class Book private constructor(
+    val isbn: String,
+    val title: String,
+    val author: String,
+    val price: Double,
+    val category: BookCategory
+) {
+    /**
+     * Companion object - Contains "static" members and methods
+     * Acts like a singleton within the Book class
+     */
+    companion object {
+        // ═══════════════════════════════════════════════════════════
+        // Static Constants (use const for compile-time constants)
+        // ═══════════════════════════════════════════════════════════
+        const val MIN_PRICE = 0.99
+        const val MAX_PRICE = 999.99
+        const val DEFAULT_DISCOUNT = 0.1
+        const val ISBN_LENGTH = 13
+        
+        // ═══════════════════════════════════════════════════════════
+        // Static Properties (mutable state tracking)
+        // ═══════════════════════════════════════════════════════════
+        private var totalBooksCreated = 0
+        private val bookRegistry = mutableMapOf<String, Book>()
+        private val bannedISBNs = mutableSetOf<String>()
+        
+        // ═══════════════════════════════════════════════════════════
+        // Factory Methods (control object creation)
+        // ═══════════════════════════════════════════════════════════
+        
+        /**
+         * Primary factory method with validation
+         */
+        fun createBook(
+            isbn: String,
+            title: String,
+            author: String,
+            price: Double,
+            category: BookCategory = BookCategory.GENERAL
+        ): Book? {
+            // Validation
+            if (!isValidISBN(isbn)) {
+                println("❌ Invalid ISBN: $isbn")
+                return null
+            }
+            
+            if (isbn in bannedISBNs) {
+                println("🚫 ISBN is banned: $isbn")
+                return null
+            }
+            
+            if (price !in MIN_PRICE..MAX_PRICE) {
+                println("💰 Invalid price: $$price (must be $MIN_PRICE-$MAX_PRICE)")
+                return null
+            }
+            
+            if (isbn in bookRegistry) {
+                println("📚 Book already exists with ISBN: $isbn")
+                return bookRegistry[isbn]
+            }
+            
+            // Create and register the book
+            val book = Book(isbn, title, author, price, category)
+            bookRegistry[isbn] = book
+            totalBooksCreated++
+            
+            println("✅ Created: $title by $author")
+            return book
+        }
+        
+        /**
+         * Factory method for creating textbooks with preset category
+         */
+        fun createTextbook(
+            isbn: String,
+            title: String,
+            author: String,
+            academicLevel: String
+        ): Book? {
+            val price = when(academicLevel.lowercase()) {
+                "elementary" -> 29.99
+                "high school" -> 49.99
+                "college" -> 89.99
+                "graduate" -> 129.99
+                else -> 59.99
+            }
+            
+            return createBook(
+                isbn = isbn,
+                title = "$title ($academicLevel Edition)",
+                author = author,
+                price = price,
+                category = BookCategory.TEXTBOOK
+            )
+        }
+        
+        /**
+         * Factory method for creating a random sample book (for testing)
+         */
+        fun createSampleBook(): Book {
+            val sampleTitles = listOf(
+                "The Great Adventure", "Mystery at Midnight", "Code Complete",
+                "The Art of Programming", "Dragons and Dungeons", "Space Odyssey"
+            )
+            val sampleAuthors = listOf(
+                "Jane Smith", "John Doe", "Alice Johnson", 
+                "Bob Wilson", "Carol White", "David Brown"
+            )
+            
+            val isbn = generateISBN()
+            val title = sampleTitles.random()
+            val author = sampleAuthors.random()
+            val price = Random.nextDouble(MIN_PRICE, 100.0)
+            val category = BookCategory.values().random()
+            
+            return createBook(isbn, title, author, price, category) 
+                ?: throw IllegalStateException("Failed to create sample book")
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // Static Utility Methods
+        // ═══════════════════════════════════════════════════════════
+        
+        /**
+         * Validate ISBN format (simplified check)
+         */
+        fun isValidISBN(isbn: String): Boolean {
+            if (isbn.length != ISBN_LENGTH) return false
+            return isbn.all { it.isDigit() }
+        }
+        
+        /**
+         * Generate a random valid ISBN for testing
+         */
+        fun generateISBN(): String {
+            return (1..ISBN_LENGTH).map { Random.nextInt(0, 10) }.joinToString("")
+        }
+        
+        /**
+         * Apply bulk discount to a price
+         */
+        fun applyDiscount(price: Double, discountPercent: Double = DEFAULT_DISCOUNT): Double {
+            return price * (1 - discountPercent)
+        }
+        
+        // ═══════════════════════════════════════════════════════════
+        // Static Registry Methods
+        // ═══════════════════════════════════════════════════════════
+        
+        /**
+         * Find a book by ISBN
+         */
+        fun findByISBN(isbn: String): Book? {
+            return bookRegistry[isbn]
+        }
+        
+        /**
+         * Get all books by an author
+         */
+        fun findByAuthor(author: String): List<Book> {
+            return bookRegistry.values.filter { 
+                it.author.equals(author, ignoreCase = true) 
+            }
+        }
+        
+        /**
+         * Ban an ISBN from being created
+         */
+        fun banISBN(isbn: String) {
+            bannedISBNs.add(isbn)
+            bookRegistry.remove(isbn)?.let {
+                println("🚫 Banned and removed: ${it.title}")
+            }
+        }
+        
+        /**
+         * Get statistics about books created
+         */
+        fun getStatistics(): String {
+            return """
+                📊 Book Statistics:
+                   Total books created: $totalBooksCreated
+                   Books in registry: ${bookRegistry.size}
+                   Banned ISBNs: ${bannedISBNs.size}
+                   Categories: ${bookRegistry.values.groupBy { it.category }
+                       .mapValues { it.value.size }}
+            """.trimIndent()
+        }
+        
+        /**
+         * Clear all books (for testing)
+         */
+        fun clearRegistry() {
+            bookRegistry.clear()
+            println("🗑️ Registry cleared")
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════════════════
+    // Instance methods (non-static)
+    // ═══════════════════════════════════════════════════════════════════════════════
+    
+    fun getDiscountedPrice(discountPercent: Double = DEFAULT_DISCOUNT): Double {
+        // Instance method can access companion object members
+        return Companion.applyDiscount(price, discountPercent)
+    }
+    
+    override fun toString(): String {
+        return "📖 $title by $author [ISBN: $isbn] - $${"%.2f".format(price)} ($category)"
+    }
+    
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Book) return false
+        return isbn == other.isbn
+    }
+    
+    override fun hashCode(): Int = isbn.hashCode()
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PART 2: Named Companion Object with Interface - Bookstore Class
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Interface that companion objects can implement
+ */
+interface StoreFactory {
+    fun createDefaultStore(): Bookstore
+    fun createPremiumStore(name: String): Bookstore
+}
+
+/**
+ * Bookstore class with named companion object implementing interface
+ */
+class Bookstore private constructor(
+    val name: String,
+    val type: StoreType,
+    private val inventory: MutableList<Book> = mutableListOf()
+) {
+    /**
+     * Named companion object - can be referenced as Bookstore.Factory
+     * Implements StoreFactory interface
+     */
+    companion object Factory : StoreFactory {
+        // Static properties for all bookstores
+        private var totalStores = 0
+        private val storeRegistry = mutableListOf<Bookstore>()
+        
+        // Business rules constants
+        const val MAX_INVENTORY_SIZE = 10000
+        const val MIN_BOOKS_TO_OPEN = 10
+        
+        // Factory methods from interface
+        override fun createDefaultStore(): Bookstore {
+            return createStore("Default Bookstore #${++totalStores}", StoreType.STANDARD)
+        }
+        
+        override fun createPremiumStore(name: String): Bookstore {
+            return createStore(name, StoreType.PREMIUM)
+        }
+        
+        // Additional factory methods
+        fun createStore(name: String, type: StoreType): Bookstore {
+            val store = Bookstore(name, type)
+            storeRegistry.add(store)
+            totalStores++
+            println("🏪 Created ${type.name} store: $name")
+            return store
+        }
+        
+        fun createChainStore(baseName: String, count: Int): List<Bookstore> {
+            return (1..count).map { 
+                createStore("$baseName #$it", StoreType.CHAIN)
+            }
+        }
+        
+        // Static utility methods
+        fun getAllStores(): List<Bookstore> = storeRegistry.toList()
+        
+        fun getStoreCount(): Int = totalStores
+        
+        fun findStoreByName(name: String): Bookstore? {
+            return storeRegistry.find { it.name == name }
+        }
+        
+        fun generateReport(): String {
+            return """
+                📊 Bookstore Chain Report:
+                Total Stores: $totalStores
+                By Type:
+                ${StoreType.values().joinToString("\n") { type ->
+                    val count = storeRegistry.count { it.type == type }
+                    "  - ${type.name}: $count stores"
+                }}
+                Total Books in All Stores: ${storeRegistry.sumOf { it.inventory.size }}
+            """.trimIndent()
+        }
+    }
+    
+    // Instance methods
+    fun addBook(book: Book): Boolean {
+        if (inventory.size >= MAX_INVENTORY_SIZE) {
+            println("❌ Inventory full at $name")
+            return false
+        }
+        
+        inventory.add(book)
+        println("➕ Added '${book.title}' to $name inventory")
+        return true
+    }
+    
+    fun addBooks(vararg books: Book) {
+        books.forEach { addBook(it) }
+    }
+    
+    fun removeBook(isbn: String): Book? {
+        val book = inventory.find { it.isbn == isbn }
+        if (book != null) {
+            inventory.remove(book)
+            println("➖ Removed '${book.title}' from $name")
+        }
+        return book
+    }
+    
+    fun searchByTitle(query: String): List<Book> {
+        return inventory.filter { 
+            it.title.contains(query, ignoreCase = true) 
+        }
+    }
+    
+    fun searchByAuthor(author: String): List<Book> {
+        return inventory.filter { 
+            it.author.equals(author, ignoreCase = true) 
+        }
+    }
+    
+    fun getInventoryValue(): Double {
+        return inventory.sumOf { it.price }
+    }
+    
+    fun getInventoryReport(): String {
+        return """
+            📚 $name Inventory:
+            Type: ${type.name}
+            Books: ${inventory.size}
+            Total Value: ${"$%.2f".format(getInventoryValue())}
+            Categories: ${inventory.groupBy { it.category }
+                .mapValues { it.value.size }
+                .entries.joinToString { "${it.key}: ${it.value}" }}
+        """.trimIndent()
+    }
+    
+    fun canOpen(): Boolean {
+        val hasEnoughBooks = inventory.size >= MIN_BOOKS_TO_OPEN
+        if (!hasEnoughBooks) {
+            println("⚠️ Need at least $MIN_BOOKS_TO_OPEN books to open (has ${inventory.size})")
+        }
+        return hasEnoughBooks
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PART 3: Companion Object Extensions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * You can extend companion objects!
+ * This adds new "static" methods to existing classes
+ */
+fun Book.Companion.createBestseller(
+    title: String,
+    author: String
+): Book? {
+    val isbn = generateISBN()
+    val book = createBook(
+        isbn = isbn,
+        title = "⭐ $title (Bestseller)",
+        author = author,
+        price = 24.99,
+        category = BookCategory.BESTSELLER
+    )
+    println("🌟 Created bestseller: $title")
+    return book
+}
+
+/**
+ * Extension property on companion object
+ */
+val Book.Companion.popularBooks: List<String>
+    get() = listOf(
+        "Clean Code", "Design Patterns", "The Pragmatic Programmer",
+        "Effective Kotlin", "Kotlin in Action"
+    )
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PART 4: Advanced Companion Object Patterns
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Order system demonstrating companion object as configuration holder
+ */
+class BookOrder private constructor(
+    val orderId: String,
+    val customerId: String,
+    val items: List<OrderItem>,
+    val timestamp: LocalDateTime
+) {
+    data class OrderItem(val book: Book, val quantity: Int)
+    
+    /**
+     * Companion object acting as configuration and builder
+     */
+    companion object OrderManager {
+        // Configuration constants
+        const val MAX_ITEMS_PER_ORDER = 100
+        const val MIN_ORDER_VALUE = 10.0
+        const val BULK_DISCOUNT_THRESHOLD = 5
+        const val BULK_DISCOUNT_RATE = 0.15
+        
+        // State tracking
+        private var orderCounter = 1000
+        private val orderHistory = mutableListOf<BookOrder>()
+        
+        // Date formatter (shared across all orders)
+        private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+        
+        /**
+         * Builder pattern using companion object
+         */
+        class OrderBuilder {
+            private val items = mutableListOf<OrderItem>()
+            private var customerId = "GUEST"
+            
+            fun forCustomer(id: String) = apply { 
+                customerId = id 
+            }
+            
+            fun addBook(book: Book, quantity: Int = 1) = apply {
+                if (items.size < MAX_ITEMS_PER_ORDER) {
+                    items.add(OrderItem(book, quantity))
+                }
+            }
+            
+            fun build(): BookOrder? {
+                if (items.isEmpty()) {
+                    println("❌ Cannot create empty order")
+                    return null
+                }
+                
+                val totalValue = calculateTotal(items)
+                if (totalValue < MIN_ORDER_VALUE) {
+                    println("❌ Order value too low: $${"%.2f".format(totalValue)} (min: $$MIN_ORDER_VALUE)")
+                    return null
+                }
+                
+                val order = BookOrder(
+                    orderId = generateOrderId(),
+                    customerId = customerId,
+                    items = items.toList(),
+                    timestamp = LocalDateTime.now()
+                )
+                
+                orderHistory.add(order)
+                println("✅ Order ${order.orderId} created for customer $customerId")
+                return order
+            }
+        }
+        
+        // Factory method returning builder
+        fun newOrder(): OrderBuilder = OrderBuilder()
+        
+        // Utility methods
+        private fun generateOrderId(): String {
+            return "ORD-${++orderCounter}"
+        }
+        
+        fun calculateTotal(items: List<OrderItem>): Double {
+            return items.sumOf { item ->
+                val basePrice = item.book.price * item.quantity
+                if (item.quantity >= BULK_DISCOUNT_THRESHOLD) {
+                    basePrice * (1 - BULK_DISCOUNT_RATE)
+                } else {
+                    basePrice
+                }
+            }
+        }
+        
+        fun getOrderHistory(): List<BookOrder> = orderHistory.toList()
+        
+        fun findOrder(orderId: String): BookOrder? {
+            return orderHistory.find { it.orderId == orderId }
+        }
+        
+        fun getDailySummary(): String {
+            val today = LocalDateTime.now().toLocalDate()
+            val todayOrders = orderHistory.filter { 
+                it.timestamp.toLocalDate() == today 
+            }
+            
+            return """
+                📅 Daily Order Summary (${today}):
+                Orders: ${todayOrders.size}
+                Total Revenue: ${"$%.2f".format(
+                    todayOrders.sumOf { calculateTotal(it.items) }
+                )}
+                Books Sold: ${todayOrders.sumOf { order ->
+                    order.items.sumOf { it.quantity }
+                }}
+            """.trimIndent()
+        }
+    }
+    
+    // Instance methods
+    fun getTotal(): Double = OrderManager.calculateTotal(items)
+    
+    fun getReceipt(): String {
+        return """
+            ════════════════════════════════════════
+            📦 ORDER RECEIPT
+            Order ID: $orderId
+            Customer: $customerId
+            Date: ${timestamp.format(OrderManager.dateFormatter)}
+            ────────────────────────────────────────
+            Items:
+            ${items.joinToString("\n") { item ->
+                "  ${item.quantity}x ${item.book.title} @ ${"$%.2f".format(item.book.price)}"
+            }}
+            ────────────────────────────────────────
+            Total: ${"$%.2f".format(getTotal())}
+            ════════════════════════════════════════
+        """.trimIndent()
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Supporting Enums
+// ═══════════════════════════════════════════════════════════════════════════════
+
+enum class BookCategory {
+    FICTION, NON_FICTION, TEXTBOOK, CHILDREN, 
+    SCIENCE, TECHNOLOGY, BESTSELLER, GENERAL
+}
+
+enum class StoreType {
+    STANDARD, PREMIUM, CHAIN, POPUP, ONLINE
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DEMONSTRATION: Complete Working Example
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fun main() {
+    println("""
+        ╔════════════════════════════════════════════════════════════════╗
+        ║     COMPANION OBJECTS & STATIC MEMBERS - BOOKSTORE DEMO       ║
+        ╚════════════════════════════════════════════════════════════════╝
+    """.trimIndent())
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 1: Book Class - Basic Companion Object Usage
+    // ═══════════════════════════════════════════════════════════════════
+    
+    println("\n═══ SECTION 1: Creating Books with Companion Object ═══\n")
+    
+    // Using companion object constants (like static fields)
+    println("Price range: $${Book.MIN_PRICE} - $${Book.MAX_PRICE}")
+    println("ISBN must be ${Book.ISBN_LENGTH} digits")
+    
+    // Using factory methods to create books
+    val book1 = Book.createBook(
+        isbn = "9780134685991",
+        title = "Effective Java",
+        author = "Joshua Bloch",
+        price = 45.99,
+        category = BookCategory.TECHNOLOGY
+    )
+    
+    val book2 = Book.createBook(
+        isbn = "9780135974445",
+        title = "Clean Code",
+        author = "Robert Martin",
+        price = 39.99,
+        category = BookCategory.TECHNOLOGY
+    )
+    
+    // Invalid book creation attempts
+    val invalidBook1 = Book.createBook(
+        isbn = "123",  // Too short
+        title = "Invalid Book",
+        author = "Unknown",
+        price = 20.00
+    )
+    
+    val invalidBook2 = Book.createBook(
+        isbn = "9780134685991",  // Duplicate ISBN
+        title = "Duplicate Book",
+        author = "Someone",
+        price = 30.00
+    )
+    
+    // Using specialized factory methods
+    val textbook = Book.createTextbook(
+        isbn = "9781234567890",
+        title = "Introduction to Algorithms",
+        author = "Thomas Cormen",
+        academicLevel = "college"
+    )
+    
+    // Creating sample books
+    val sample1 = Book.createSampleBook()
+    val sample2 = Book.createSampleBook()
+    
+    // Using companion object extension function
+    val bestseller = Book.createBestseller(
+        title = "The Kotlin Way",
+        author = "Kotlin Expert"
+    )
+    
+    // Accessing companion object extension property
+    println("\nPopular programming books: ${Book.popularBooks}")
+    
+    // Using static utility methods
+    val discountedPrice = Book.applyDiscount(100.0, 0.2)
+    println("20% discount on $100: $${"%.2f".format(discountedPrice)}")
+    
+    // Finding books
+    val foundBook = Book.findByISBN("9780134685991")
+    println("\nFound by ISBN: ${foundBook?.title}")
+    
+    val authorBooks = Book.findByAuthor("Joshua Bloch")
+    println("Books by Joshua Bloch: ${authorBooks.size}")
+    
+    // Ban an ISBN
+    Book.banISBN("9999999999999")
+    
+    // Get statistics
+    println("\n${Book.getStatistics()}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 2: Bookstore - Named Companion Object with Interface
+    // ═══════════════════════════════════════════════════════════════════
+    
+    println("\n\n═══ SECTION 2: Bookstore with Named Companion ═══\n")
+    
+    // Using named companion object (can reference as Factory)
+    val defaultStore = Bookstore.Factory.createDefaultStore()
+    val premiumStore = Bookstore.createPremiumStore("Elite Books")
+    
+    // Can also reference companion by name
+    val anotherStore = Bookstore.Factory.createStore(
+        "Community Books", 
+        StoreType.STANDARD
+    )
+    
+    // Create chain stores
+    val chainStores = Bookstore.createChainStore("BookMart", 3)
+    
+    // Add books to stores
+    book1?.let { defaultStore.addBook(it) }
+    book2?.let { defaultStore.addBook(it) }
+    textbook?.let { premiumStore.addBook(it) }
+    sample1?.let { premiumStore.addBook(it) }
+    sample2?.let { premiumStore.addBook(it) }
+    
+    // Check if store can open
+    println("\nCan default store open? ${defaultStore.canOpen()}")
+    
+    // Add more books to meet minimum
+    repeat(8) {
+        Book.createSampleBook()?.let { defaultStore.addBook(it) }
+    }
+    println("Can default store open now? ${defaultStore.canOpen()}")
+    
+    // Search in store
+    val searchResults = defaultStore.searchByTitle("Clean")
+    println("\nSearch results for 'Clean': ${searchResults.size} books")
+    
+    // Store inventory report
+    println("\n${defaultStore.getInventoryReport()}")
+    println("\n${premiumStore.getInventoryReport()}")
+    
+    // Global store report
+    println("\n${Bookstore.generateReport()}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 3: BookOrder - Advanced Companion Object Patterns
+    // ═══════════════════════════════════════════════════════════════════
+    
+    println("\n\n═══ SECTION 3: Order System with Builder Pattern ═══\n")
+    
+    // Create an order using builder pattern in companion object
+    val order1 = BookOrder.newOrder()
+        .forCustomer("CUST-001")
+        .apply {
+            book1?.let { addBook(it, 2) }
+            book2?.let { addBook(it, 1) }
+            textbook?.let { addBook(it, 1) }
+        }
+        .build()
+    
+    // Print receipt
+    order1?.let { println(it.getReceipt()) }
+    
+    // Create bulk order (triggers bulk discount)
+    val bulkOrder = BookOrder.newOrder()
+        .forCustomer("CUST-002")
+        .apply {
+            sample1?.let { addBook(it, 10) }  // Bulk discount applies
+        }
+        .build()
+    
+    bulkOrder?.let { println("\n${it.getReceipt()}") }
+    
+    // Try to create invalid order (too small)
+    val invalidOrder = BookOrder.newOrder()
+        .forCustomer("CUST-003")
+        .apply {
+            // No books added
+        }
+        .build()
+    
+    // Get order summary
+    println("\n${BookOrder.getDailySummary()}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SECTION 4: Key Concepts Summary
+    // ═══════════════════════════════════════════════════════════════════
+    
+    println("\n\n═══ KEY CONCEPTS DEMONSTRATED ═══")
+    println("""
+        
+        1. COMPANION OBJECT BASICS:
+           ✓ Replaces Java's static members
+           ✓ One companion object per class
+           ✓ Access via ClassName.member
+        
+        2. CONSTANTS & PROPERTIES:
+           ✓ Use 'const val' for compile-time constants
+           ✓ Can have mutable properties for state tracking
+           ✓ Properties shared across all instances
+        
+        3. FACTORY METHODS:
+           ✓ Control object creation
+           ✓ Validation before instantiation
+           ✓ Multiple creation strategies
+        
+        4. NAMED COMPANIONS:
+           ✓ Can give companion object a name
+           ✓ Reference as ClassName.CompanionName
+           ✓ Can implement interfaces
+        
+        5. COMPANION EXTENSIONS:
+           ✓ Can extend companion objects
+           ✓ Add "static" methods to existing classes
+           ✓ Extension properties also supported
+        
+        6. ADVANCED PATTERNS:
+           ✓ Builder pattern implementation
+           ✓ Registry/tracking patterns
+           ✓ Configuration management
+           ✓ Singleton-like behavior
+        
+        7. BEST PRACTICES:
+           ✓ Use for factory methods
+           ✓ Shared configuration/constants
+           ✓ Instance counting/tracking
+           ✓ Utility functions related to class
+           
+    """.trimIndent())
+    
+    // Final statistics
+    println("\n═══ FINAL STATISTICS ═══")
+    println(Book.getStatistics())
+    println("\n${Bookstore.generateReport()}")
+    println("\n${BookOrder.getDailySummary()}")
+    
+    println("""
+        
+        ════════════════════════════════════════════════════════════════
+        Companion Objects provide elegant static functionality in Kotlin
+        without the complexity of traditional static members!
+        ════════════════════════════════════════════════════════════════
+    """.trimIndent())
+}
