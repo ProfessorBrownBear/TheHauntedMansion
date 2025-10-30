@@ -1,0 +1,310 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DEEP VS SHALLOW COPYING - VISUAL DEMONSTRATION
+ * 
+ * This program uses a Shopping Cart example to visually show the critical
+ * difference between shallow and deep copying.
+ * 
+ * SHALLOW COPY: Copies the object but SHARES nested objects (dangerous!)
+ * DEEP COPY: Copies everything, creating independent objects (safe!)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Product in our shopping system
+ */
+data class Product(
+    val id: String,
+    val name: String,
+    var price: Double
+)
+
+/**
+ * Shopping Cart containing products
+ */
+data class ShoppingCart(
+    val customerId: String,
+    val customerName: String,
+    val items: MutableList<Product>  // ⚠️ Mutable list - watch for shallow copy issues!
+)
+
+/**
+ * Visual helper to draw memory diagrams
+ */
+fun drawMemoryDiagram(title: String, original: ShoppingCart, copy: ShoppingCart) {
+    println("\n╔════════════════════════════════════════════════════════════╗")
+    println("║ $title")
+    println("╠════════════════════════════════════════════════════════════╣")
+    println("║ STACK MEMORY          │         HEAP MEMORY                ║")
+    println("╟───────────────────────┼────────────────────────────────────╢")
+    
+    // Check if items list is same reference
+    val sameList = original.items === copy.items
+    
+    if (sameList) {
+        // Shallow copy - sharing the list
+        println("║                       │     ┌──────────────────┐          ║")
+        println("║ original ─────────────┼────▶│ ShoppingCart #1    │          ║")
+        println("║                       │     │ items ─┐          │          ║")
+        println("║                       │     └────────┼─────────┘          ║")
+        println("║                       │               │                    ║")
+        println("║                       │               ▼                    ║")
+        println("║                       │     ┌──────────────────┐          ║")
+        println("║                       │     │ MutableList      │          ║")
+        println("║                       │     │ [Product,Product]│ ◀─SHARED!║")
+        println("║                       │     └──────────────────┘          ║")
+        println("║                       │               ▲                    ║")
+        println("║                       │               │                    ║")
+        println("║ copy ──────────────────┼────▶┌────────┼─────────┐          ║")
+        println("║                       │     │ ShoppingCart #2    │          ║")
+        println("║                       │     │ items ─┘          │          ║")
+        println("║                       │     └──────────────────┘          ║")
+    } else {
+        // Deep copy - separate lists
+        println("║                       │     ┌──────────────────┐          ║")
+        println("║ original ─────────────┼────▶│ ShoppingCart #1    │          ║")
+        println("║                       │     │ items ────────┐   │          ║")
+        println("║                       │     └───────────────┼──┘          ║")
+        println("║                       │                      ▼             ║")
+        println("║                       │     ┌──────────────────┐          ║")
+        println("║                       │     │ MutableList #1    │          ║")
+        println("║                       │     │ [Product,Product]│          ║")
+        println("║                       │     └──────────────────┘          ║")
+        println("║                       │                                    ║")
+        println("║ copy ──────────────────┼────▶┌──────────────────┐          ║")
+        println("║                       │     │ ShoppingCart #2    │          ║")
+        println("║                       │     │ items ────────┐   │          ║")
+        println("║                       │     └───────────────┼──┘          ║")
+        println("║                       │                      ▼             ║")
+        println("║                       │     ┌──────────────────┐          ║")
+        println("║                       │     │ MutableList #2    │ ◀─SEPARATE║")
+        println("║                       │     │ [Product,Product]│          ║")
+        println("║                       │     └──────────────────┘          ║")
+    }
+    println("╚═══════════════════════════════════════════════════════════╝")
+}
+
+/**
+ * Print cart contents with visual formatting
+ */
+fun printCart(label: String, cart: ShoppingCart, highlight: String = "") {
+    println("\n┌─── $label ───")
+    println("│ Customer: ${cart.customerName}")
+    println("│ Items (${cart.items.size}):")
+    cart.items.forEach { product ->
+        val marker = if (product.name == highlight) " ⚠️ NEW!" else ""
+        println("│   • ${product.name}: $${String.format("%.2f", product.price)}$marker")
+    }
+    val total = cart.items.sumOf { it.price }
+    println("│ Total: $${String.format("%.2f", total)}")
+    println("└" + "─".repeat(50))
+}
+
+fun main() {
+    println("╔════════════════════════════════════════════════════════════╗")
+    println("║        DEEP VS SHALLOW COPYING - VISUAL DEMO              ║")
+    println("╚════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SETUP: Create Original Shopping Cart
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ SETUP: Creating Original Shopping Cart ═══")
+    
+    val products = mutableListOf(
+        Product("P001", "Laptop", 999.99),
+        Product("P002", "Mouse", 29.99),
+        Product("P003", "Keyboard", 79.99)
+    )
+    
+    val originalCart = ShoppingCart(
+        customerId = "C123",
+        customerName = "Alice",
+        items = products
+    )
+    
+    printCart("ORIGINAL CART", originalCart)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: SHALLOW COPY - The Danger!
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══════════════════════════════════════════════════════════════")
+    println("    PART 1: SHALLOW COPY - Sharing References (DANGEROUS!)")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    // Create shallow copy using data class copy()
+    val shallowCopy = originalCart.copy(
+        customerName = "Bob (Shallow)"
+    )
+    // Note: copy() only copies the reference to the items list, not the list itself!
+    
+    println("\n📋 Created shallow copy for Bob")
+    printCart("SHALLOW COPY", shallowCopy)
+    
+    // Check if they share the same list
+    println("\n🔍 MEMORY CHECK:")
+    println("   originalCart.items === shallowCopy.items: ${originalCart.items === shallowCopy.items}")
+    println("   ⚠️ TRUE means they share the SAME list object!")
+    
+    drawMemoryDiagram("SHALLOW COPY - Shared List!", originalCart, shallowCopy)
+    
+    // Now modify the shallow copy's cart
+    println("\n🛒 Bob adds a Monitor to his cart...")
+    shallowCopy.items.add(Product("P004", "Monitor", 299.99))
+    
+    println("\n💥 PROBLEM: Alice's cart ALSO changed!")
+    printCart("ALICE'S CART (Original)", originalCart, "Monitor")
+    printCart("BOB'S CART (Shallow Copy)", shallowCopy, "Monitor")
+    
+    println("\n⚠️ SHALLOW COPY DANGER: Changes to one affect BOTH!")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: DEEP COPY - The Safe Way!
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══════════════════════════════════════════════════════════════")
+    println("    PART 2: DEEP COPY - Independent Objects (SAFE!)")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    // Reset original cart
+    val freshProducts = mutableListOf(
+        Product("P001", "Laptop", 999.99),
+        Product("P002", "Mouse", 29.99),
+        Product("P003", "Keyboard", 79.99)
+    )
+    
+    val originalCart2 = ShoppingCart(
+        customerId = "C456",
+        customerName = "Carol",
+        items = freshProducts
+    )
+    
+    println("\n📋 Creating DEEP copy for David")
+    
+    // Create DEEP copy - copy the list AND its contents
+    val deepCopy = originalCart2.copy(
+        customerName = "David (Deep)",
+        items = originalCart2.items.map { product ->
+            product.copy()  // Copy each product
+        }.toMutableList()  // Create new list
+    )
+    
+    printCart("ORIGINAL (Carol)", originalCart2)
+    printCart("DEEP COPY (David)", deepCopy)
+    
+    // Check if they have different lists
+    println("\n🔍 MEMORY CHECK:")
+    println("   originalCart2.items === deepCopy.items: ${originalCart2.items === deepCopy.items}")
+    println("   ✅ FALSE means they have SEPARATE list objects!")
+    
+    drawMemoryDiagram("DEEP COPY - Separate Lists!", originalCart2, deepCopy)
+    
+    // Now modify the deep copy's cart
+    println("\n🛒 David adds a Webcam to his cart...")
+    deepCopy.items.add(Product("P005", "Webcam", 89.99))
+    
+    // Also modify a product price
+    println("💰 David gets a discount on the Laptop...")
+    deepCopy.items[0].price = 899.99  // $100 discount
+    
+    println("\n✅ SUCCESS: Carol's cart is UNCHANGED!")
+    printCart("CAROL'S CART (Original)", originalCart2)
+    printCart("DAVID'S CART (Deep Copy)", deepCopy, "Webcam")
+    
+    println("\n✅ DEEP COPY SUCCESS: Changes are independent!")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: SIDE-BY-SIDE COMPARISON
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══════════════════════════════════════════════════════════════")
+    println("    PART 3: SIDE-BY-SIDE COMPARISON")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    println("""
+    ┌─────────────────────────┬─────────────────────────┐
+    │     SHALLOW COPY        │       DEEP COPY         │
+    ├─────────────────────────┼─────────────────────────┤
+    │ cart1.copy()            │ cart1.copy(             │
+    │                         │   items = items.map {   │
+    │                         │     it.copy()           │
+    │                         │   }.toMutableList()     │
+    │                         │ )                       │
+    ├─────────────────────────┼─────────────────────────┤
+    │ ❌ Shares nested objects│ ✅ Independent objects   │
+    │ ❌ Changes affect both  │ ✅ Changes are isolated  │
+    │ ❌ Dangerous bugs       │ ✅ Safe to modify        │
+    │ ⚡ Faster (less copying)│ 🐢 Slower (more copying) │
+    │ 💾 Less memory used     │ 💾 More memory used      │
+    └─────────────────────────┴─────────────────────────┘
+    """.trimIndent())
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 4: PRACTICAL EXAMPLE - Save & Restore
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══════════════════════════════════════════════════════════════")
+    println("    PART 4: PRACTICAL USE CASE - Save & Restore Cart")
+    println("═══════════════════════════════════════════════════════════════")
+    
+    val workingCart = ShoppingCart(
+        customerId = "C789",
+        customerName = "Eve",
+        items = mutableListOf(
+            Product("P010", "Book", 19.99),
+            Product("P011", "Pen", 2.99)
+        )
+    )
+    
+    println("\n📸 Saving cart state before experiments...")
+    
+    // WRONG WAY - Shallow "backup"
+    val shallowBackup = workingCart.copy()
+    
+    // RIGHT WAY - Deep backup
+    val deepBackup = workingCart.copy(
+        items = workingCart.items.map { it.copy() }.toMutableList()
+    )
+    
+    printCart("WORKING CART (Before)", workingCart)
+    
+    println("\n🧪 Experimenting: Adding expensive items...")
+    workingCart.items.add(Product("P012", "Diamond Ring", 5000.00))
+    workingCart.items.add(Product("P013", "Gold Watch", 3000.00))
+    
+    printCart("WORKING CART (After Experiment)", workingCart)
+    
+    println("\n🔄 Attempting to restore from shallow backup...")
+    println("   Shallow backup has ${shallowBackup.items.size} items")
+    println("   ❌ FAILED! Shallow backup also has the expensive items!")
+    
+    println("\n🔄 Restoring from deep backup...")
+    println("   Deep backup has ${deepBackup.items.size} items")
+    println("   ✅ SUCCESS! Deep backup preserved original state!")
+    
+    printCart("SHALLOW BACKUP (Corrupted)", shallowBackup)
+    printCart("DEEP BACKUP (Preserved)", deepBackup)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n╔════════════════════════════════════════════════════════════╗")
+    println("║                      KEY TAKEAWAYS                        ║")
+    println("╠════════════════════════════════════════════════════════════╣")
+    println("║                                                            ║")
+    println("║  SHALLOW COPY:                                            ║")
+    println("║  • Uses: originalCart.copy()                              ║")
+    println("║  • Copies: Top-level properties only                      ║")
+    println("║  • Nested objects: SHARED (same reference)                ║")
+    println("║  • Result: Changes to nested objects affect BOTH!         ║")
+    println("║  • When to use: When you WANT to share data               ║")
+    println("║                                                            ║")
+    println("║  DEEP COPY:                                               ║")
+    println("║  • Uses: Manual copying of nested objects                 ║")
+    println("║  • Copies: Everything, creating new objects               ║")
+    println("║  • Nested objects: INDEPENDENT (new instances)            ║")
+    println("║  • Result: Changes are completely isolated                ║")
+    println("║  • When to use: When you need TRUE independence           ║")
+    println("║                                                            ║")
+    println("║  REMEMBER:                                                ║")
+    println("║  data class copy() = SHALLOW COPY                         ║")
+    println("║  For deep copy, you must manually copy nested objects!    ║")
+    println("║                                                            ║")
+    println("╚════════════════════════════════════════════════════════════╝")
+}
