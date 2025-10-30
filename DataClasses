@@ -1,0 +1,307 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DATA CLASSES IN KOTLIN - AUTOMATIC equals() and toString()
+ * 
+ * A minimal, complete example showing how data classes automatically generate
+ * useful methods that you'd normally have to write manually.
+ * 
+ * Theme: Book Store Management
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * REGULAR CLASS - The Manual Way (What We Want to Avoid)
+ * 
+ * This is how you'd have to write a class WITHOUT using 'data class'.
+ * Notice how much boilerplate code we need to write manually!
+ */
+class RegularBook(
+    val isbn: String,
+    val title: String,
+    val author: String,
+    val price: Double
+) {
+    /**
+     * MANUALLY WRITTEN toString()
+     * Without this, printing would show: RegularBook@2f4d3709 (memory address)
+     */
+    override fun toString(): String {
+        return "RegularBook(isbn='$isbn', title='$title', author='$author', price=$price)"
+    }
+    
+    /**
+     * MANUALLY WRITTEN equals()
+     * Without this, two books with same content would NOT be equal
+     * By default, equals() only checks if they're the same object in memory
+     */
+    override fun equals(other: Any?): Boolean {
+        // Step 1: Check if comparing with itself
+        if (this === other) return true
+        
+        // Step 2: Check if other is null or different class
+        if (other !is RegularBook) return false
+        
+        // Step 3: Compare each property
+        if (isbn != other.isbn) return false
+        if (title != other.title) return false
+        if (author != other.author) return false
+        if (price != other.price) return false
+        
+        return true
+    }
+    
+    /**
+     * MANUALLY WRITTEN hashCode()
+     * Must be consistent with equals() - equal objects must have same hashCode
+     */
+    override fun hashCode(): Int {
+        var result = isbn.hashCode()
+        result = 31 * result + title.hashCode()
+        result = 31 * result + author.hashCode()
+        result = 31 * result + price.hashCode()
+        return result
+    }
+    
+    // Notice: NO copy() method - we'd have to write that manually too!
+    // Notice: NO componentN() functions for destructuring - manual work!
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DATA CLASS - The Kotlin Way (Automatic Generation!)
+ * 
+ * Just add 'data' keyword and Kotlin generates ALL the methods above AUTOMATICALLY!
+ * This single line replaces ~40 lines of boilerplate code!
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+data class DataBook(
+    val isbn: String,        // All primary constructor params must be val/var
+    val title: String,       // These become properties
+    val author: String,      // Used for equals(), toString(), etc.
+    val price: Double        // Order matters for componentN() functions
+) {
+    // That's it! Kotlin automatically generates:
+    // ✅ toString() - Human-readable string representation
+    // ✅ equals() - Compare by content, not reference
+    // ✅ hashCode() - Consistent with equals()
+    // ✅ copy() - Create modified copies easily
+    // ✅ componentN() - For destructuring (component1(), component2(), etc.)
+    
+    /**
+     * You can still add your own methods if needed
+     * This doesn't affect the auto-generated methods
+     */
+    fun getDiscountPrice(discountPercent: Double): Double {
+        return price * (1 - discountPercent)
+    }
+    
+    /**
+     * You can add properties that aren't part of the primary constructor
+     * These WON'T be included in equals(), toString(), etc.
+     */
+    var inStock: Boolean = true  // Not included in auto-generated methods
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DEMONSTRATION: See the Magic in Action!
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+fun main() {
+    println("╔════════════════════════════════════════════════════════════════╗")
+    println("║     DATA CLASS DEMONSTRATION - BOOKSTORE EXAMPLE          ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: toString() Comparison
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 1: toString() - Automatic vs Manual ═══\n")
+    
+    // Create identical books using both classes
+    val regularBook = RegularBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val dataBook = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    
+    // Print them - notice the difference!
+    println("Regular Class toString():")
+    println("  $regularBook")  // Uses our manual toString()
+    
+    println("\nData Class toString() [AUTOMATIC]:")
+    println("  $dataBook")  // Uses auto-generated toString()
+    
+    // Both produce human-readable output, but data class got it for FREE!
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: equals() Comparison
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 2: equals() - Content Equality ═══\n")
+    
+    // Create two books with SAME content
+    val book1 = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val book2 = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    
+    // These are DIFFERENT objects in memory
+    println("Are they the same object in memory?")
+    println("  book1 === book2: ${book1 === book2}")  // false - different objects
+    
+    // But they have the SAME content
+    println("\nDo they have the same content?")
+    println("  book1 == book2: ${book1 == book2}")  // true - auto equals() compares content!
+    
+    // Change one property
+    val book3 = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 39.99)  // Different price
+    println("\nAfter changing price:")
+    println("  book1 == book3: ${book1 == book3}")  // false - different content
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: copy() Method - Only in Data Classes!
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 3: copy() - Create Modified Copies ═══\n")
+    
+    val originalBook = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    println("Original: $originalBook")
+    
+    // Create a copy with a different price (Black Friday sale!)
+    val saleBook = originalBook.copy(price = 29.99)
+    println("Sale Copy: $saleBook")
+    
+    // Create a copy with multiple changes
+    val updatedBook = originalBook.copy(
+        title = "Effective Java (3rd Edition)",
+        price = 49.99
+    )
+    println("Updated: $updatedBook")
+    
+    // Original remains unchanged!
+    println("Original still: $originalBook")
+    
+    // Regular class doesn't have copy() - you'd have to write it manually!
+    // val regularCopy = regularBook.copy()  // ❌ Won't compile!
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 4: Destructuring - Only in Data Classes!
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 4: Destructuring with componentN() ═══\n")
+    
+    val book = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    
+    // Destructuring - extracts properties in order of declaration
+    val (isbn, title, author, price) = book
+    
+    println("Destructured values:")
+    println("  ISBN: $isbn")
+    println("  Title: $title")
+    println("  Author: $author")
+    println("  Price: $$price")
+    
+    // You can also destructure partially
+    val (_, bookTitle, bookAuthor) = book  // Skip ISBN with _
+    println("\nPartial destructuring:")
+    println("  Just need: $bookTitle by $bookAuthor")
+    
+    // Regular class can't do this!
+    // val (i, t, a, p) = regularBook  // ❌ Won't compile!
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 5: hashCode() - Important for Collections
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 5: hashCode() - Consistent with equals() ═══\n")
+    
+    val bookA = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val bookB = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    
+    println("Equal objects have same hashCode:")
+    println("  bookA.hashCode(): ${bookA.hashCode()}")
+    println("  bookB.hashCode(): ${bookB.hashCode()}")
+    println("  Are they equal? ${bookA.hashCode() == bookB.hashCode()}")  // true
+    
+    // This is important for HashSet, HashMap, etc.
+    val bookSet = hashSetOf(bookA)
+    println("\nHashSet operations:")
+    println("  Set contains bookA? ${bookA in bookSet}")  // true
+    println("  Set contains bookB? ${bookB in bookSet}")  // true (same content!)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 6: Properties Not in Primary Constructor
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 6: Properties Outside Primary Constructor ═══\n")
+    
+    val book4 = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val book5 = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    
+    // These books are equal based on primary constructor properties
+    println("Books equal? ${book4 == book5}")  // true
+    
+    // But changing non-primary properties doesn't affect equality
+    book4.inStock = false
+    book5.inStock = true
+    
+    println("After changing inStock property:")
+    println("  book4.inStock: ${book4.inStock}")
+    println("  book5.inStock: ${book5.inStock}")
+    println("  Still equal? ${book4 == book5}")  // true! inStock not in equals()
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 7: Real-World Usage Example
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 7: Real-World Bookstore Scenario ═══\n")
+    
+    // Create inventory
+    val inventory = mutableListOf<DataBook>()
+    
+    // Add books
+    val kotlinBook = DataBook("978-1234567890", "Kotlin in Action", "Dmitry Jemerov", 39.99)
+    val javaBook = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val cleanCode = DataBook("978-0132350884", "Clean Code", "Robert Martin", 42.99)
+    
+    inventory.addAll(listOf(kotlinBook, javaBook, cleanCode))
+    
+    // Search for a book
+    val searchBook = DataBook("978-0134685991", "Effective Java", "Joshua Bloch", 45.99)
+    val found = inventory.contains(searchBook)  // Uses equals() automatically!
+    println("Is 'Effective Java' in inventory? $found")
+    
+    // Apply discount to all books
+    val saleInventory = inventory.map { book ->
+        book.copy(price = book.price * 0.8)  // 20% off sale
+    }
+    
+    println("\nSale prices:")
+    saleInventory.forEach { book ->
+        println("  ${book.title}: $${String.format("%.2f", book.price)}")
+    }
+    
+    // Find duplicates (books with same ISBN)
+    val duplicate = DataBook("978-1234567890", "Kotlin in Action", "Dmitry Jemerov", 39.99)
+    if (duplicate in inventory) {
+        println("\n⚠️ Duplicate book detected: ${duplicate.title}")
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ SUMMARY: Data Class Benefits ═══\n")
+    println("""
+        Data classes automatically provide:
+        
+        1. toString() - Human-readable output
+           Instead of: RegularBook@2f4d3709
+           You get: DataBook(isbn='...', title='...', ...)
+        
+        2. equals() - Content-based equality
+           book1 == book2 compares VALUES, not references
+        
+        3. hashCode() - Consistent with equals()
+           Required for HashSet, HashMap to work correctly
+        
+        4. copy() - Create modified copies
+           book.copy(price = 29.99) creates new book with different price
+        
+        5. componentN() - Destructuring support
+           val (isbn, title, author, price) = book
+        
+        All this from just adding 'data' keyword! 🎉
+        
+        Rule: Use data class when your class primarily holds data
+        Examples: Book, Customer, Order, Product, etc.
+    """.trimIndent())
+}
