@@ -1,0 +1,478 @@
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * INTERFACES IN KOTLIN - MINIMAL VIABLE EXAMPLE
+ * 
+ * A simple, complete example showing how interfaces define contracts and enable
+ * polymorphism in a bookstore system.
+ * 
+ * Key Concepts:
+ * - Interfaces define what a class MUST do, not HOW to do it
+ * - Classes can implement MULTIPLE interfaces (unlike inheritance)
+ * - Interfaces can have default implementations
+ * - Enable polymorphism - treat different types uniformly
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * INTERFACE 1: Sellable
+ * 
+ * Any item that can be sold in our bookstore must implement this.
+ * This is a CONTRACT - implementing classes MUST provide these members.
+ */
+interface Sellable {
+    // Abstract property - implementers must provide this
+    val price: Double
+    val title: String
+    
+    // Abstract method - implementers MUST override this
+    fun getDescription(): String
+    
+    // Default implementation - implementers CAN override this, but don't have to
+    fun getPriceWithTax(taxRate: Double = 0.08): Double {
+        return price * (1 + taxRate)
+    }
+    
+    // Another default method
+    fun getDiscountedPrice(discountPercent: Double): Double {
+        return price * (1 - discountPercent)
+    }
+}
+
+/**
+ * INTERFACE 2: Readable
+ * 
+ * Items that can be read (books, magazines, etc.)
+ */
+interface Readable {
+    val pageCount: Int
+    val author: String
+    
+    // Abstract method
+    fun getReadingTime(): Int  // in minutes
+    
+    // Default implementation
+    fun getReadingDifficulty(): String {
+        return when {
+            pageCount < 100 -> "Easy"
+            pageCount < 300 -> "Medium"
+            else -> "Challenging"
+        }
+    }
+}
+
+/**
+ * INTERFACE 3: Digital
+ * 
+ * For digital/downloadable products
+ */
+interface Digital {
+    val fileSize: Double  // in MB
+    val downloadUrl: String
+    
+    // Default method
+    fun canDownload(): Boolean {
+        return downloadUrl.isNotEmpty()
+    }
+    
+    fun getDownloadTime(speedMbps: Double = 10.0): Double {
+        return fileSize / speedMbps  // Returns time in seconds
+    }
+}
+
+/**
+ * INTERFACE 4: Reviewable
+ * 
+ * Items that can be reviewed by customers
+ */
+interface Reviewable {
+    var rating: Double
+    val reviews: MutableList<String>
+    
+    // Default implementation for adding reviews
+    fun addReview(review: String, stars: Int) {
+        reviews.add(review)
+        // Update rating (simplified - in reality would be average)
+        rating = (rating + stars) / 2
+    }
+    
+    fun getAverageRating(): Double = rating
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * IMPLEMENTATION CLASSES
+ * 
+ * Now let's create different bookstore items that implement these interfaces
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * CLASS 1: PhysicalBook
+ * Implements Sellable, Readable, and Reviewable
+ * A traditional paper book
+ */
+class PhysicalBook(
+    override val title: String,           // From Sellable
+    override val price: Double,           // From Sellable
+    override val author: String,          // From Readable
+    override val pageCount: Int,          // From Readable
+    override var rating: Double = 0.0     // From Reviewable
+) : Sellable, Readable, Reviewable {
+    
+    // Must provide this for Reviewable
+    override val reviews = mutableListOf<String>()
+    
+    // Must implement abstract method from Sellable
+    override fun getDescription(): String {
+        return "📚 Physical Book: '$title' by $author ($pageCount pages)"
+    }
+    
+    // Must implement abstract method from Readable
+    override fun getReadingTime(): Int {
+        // Assume 1 page per minute average reading speed
+        return pageCount
+    }
+    
+    // We're using default implementations for other methods!
+    // getPriceWithTax(), getDiscountedPrice(), getReadingDifficulty(), addReview()
+}
+
+/**
+ * CLASS 2: EBook
+ * Implements Sellable, Readable, Digital, and Reviewable
+ * A digital book that can be downloaded
+ */
+class EBook(
+    override val title: String,
+    override val price: Double,
+    override val author: String,
+    override val pageCount: Int,
+    override val fileSize: Double,        // From Digital
+    override val downloadUrl: String,      // From Digital
+    override var rating: Double = 0.0
+) : Sellable, Readable, Digital, Reviewable {
+    
+    override val reviews = mutableListOf<String>()
+    
+    override fun getDescription(): String {
+        return "📱 E-Book: '$title' by $author (${fileSize}MB)"
+    }
+    
+    override fun getReadingTime(): Int {
+        // E-books might be read faster with search features
+        return (pageCount * 0.9).toInt()
+    }
+    
+    // Override a default method to customize behavior
+    override fun getPriceWithTax(taxRate: Double): Double {
+        // Digital goods might have different tax rules
+        return price * (1 + taxRate * 0.5)  // Half tax for digital
+    }
+}
+
+/**
+ * CLASS 3: AudioBook
+ * Implements Sellable, Digital, and Reviewable (but NOT Readable - no pages!)
+ * An audio version of a book
+ */
+class AudioBook(
+    override val title: String,
+    override val price: Double,
+    val narrator: String,                  // Unique to audiobook
+    val durationMinutes: Int,              // Instead of pages
+    override val fileSize: Double,
+    override val downloadUrl: String,
+    override var rating: Double = 0.0
+) : Sellable, Digital, Reviewable {
+    
+    override val reviews = mutableListOf<String>()
+    
+    override fun getDescription(): String {
+        return "🎧 AudioBook: '$title' narrated by $narrator (${durationMinutes} min)"
+    }
+    
+    // AudioBook has its own unique method
+    fun getPlaybackTime(speed: Double = 1.0): Double {
+        return durationMinutes / speed
+    }
+}
+
+/**
+ * CLASS 4: Magazine
+ * Implements Sellable, Readable, and uses different behavior
+ */
+class Magazine(
+    override val title: String,
+    override val price: Double,
+    val issue: String,                     // Unique to magazine
+    override val pageCount: Int,
+    val publisher: String                  // Instead of author
+) : Sellable, Readable {
+    
+    // Magazine doesn't have a single author
+    override val author: String = publisher
+    
+    override fun getDescription(): String {
+        return "📰 Magazine: '$title' Issue $issue by $publisher"
+    }
+    
+    override fun getReadingTime(): Int {
+        // Magazines are often skimmed, not read fully
+        return pageCount / 2
+    }
+    
+    // Override default to show magazines are easy reads
+    override fun getReadingDifficulty(): String {
+        return "Light Reading"
+    }
+}
+
+/**
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * DEMONSTRATION: Polymorphism and Interface Power
+ * ═══════════════════════════════════════════════════════════════════════════════
+ */
+
+/**
+ * Function that works with ANY Sellable item
+ * This is POLYMORPHISM - different types, same interface
+ */
+fun processSale(item: Sellable, quantity: Int = 1) {
+    println("\n💰 Processing Sale:")
+    println("  Item: ${item.getDescription()}")
+    println("  Price: $${item.price}")
+    println("  With tax: $${String.format("%.2f", item.getPriceWithTax())}")
+    println("  Quantity: $quantity")
+    println("  Total: $${String.format("%.2f", item.getPriceWithTax() * quantity)}")
+}
+
+/**
+ * Function that works with ANY Readable item
+ */
+fun displayReadingInfo(item: Readable) {
+    println("\n📖 Reading Information:")
+    println("  Author: ${item.author}")
+    println("  Pages: ${item.pageCount}")
+    println("  Estimated time: ${item.getReadingTime()} minutes")
+    println("  Difficulty: ${item.getReadingDifficulty()}")
+}
+
+/**
+ * Function that works with ANY Digital item
+ */
+fun downloadProduct(item: Digital) {
+    println("\n💾 Download Information:")
+    println("  File size: ${item.fileSize} MB")
+    if (item.canDownload()) {
+        println("  Download URL: ${item.downloadUrl}")
+        println("  Est. download time: ${String.format("%.1f", item.getDownloadTime())} seconds")
+    } else {
+        println("  ❌ Download not available")
+    }
+}
+
+/**
+ * Function that works with ANY Reviewable item
+ */
+fun addCustomerReview(item: Reviewable, review: String, stars: Int) {
+    item.addReview(review, stars)
+    println("\n⭐ Review added! New rating: ${String.format("%.1f", item.getAverageRating())}")
+}
+
+/**
+ * MAIN FUNCTION - See interfaces in action!
+ */
+fun main() {
+    println("╔════════════════════════════════════════════════════════════════╗")
+    println("║         INTERFACES DEMONSTRATION - BOOKSTORE                  ║")
+    println("╚════════════════════════════════════════════════════════════════╝")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 1: Creating Different Types
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n═══ PART 1: Creating Different Bookstore Items ═══")
+    
+    // Create different types of products
+    val physicalBook = PhysicalBook(
+        title = "The Great Gatsby",
+        price = 15.99,
+        author = "F. Scott Fitzgerald",
+        pageCount = 180
+    )
+    
+    val ebook = EBook(
+        title = "Effective Kotlin",
+        price = 29.99,
+        author = "Marcin Moskala",
+        pageCount = 400,
+        fileSize = 5.2,
+        downloadUrl = "https://books.com/effective-kotlin.pdf"
+    )
+    
+    val audiobook = AudioBook(
+        title = "Atomic Habits",
+        price = 24.99,
+        narrator = "James Clear",
+        durationMinutes = 330,
+        fileSize = 125.5,
+        downloadUrl = "https://books.com/atomic-habits.mp3"
+    )
+    
+    val magazine = Magazine(
+        title = "Tech Today",
+        price = 4.99,
+        issue = "March 2024",
+        pageCount = 60,
+        publisher = "TechMedia Inc"
+    )
+    
+    // Print descriptions - each class implements differently
+    println("\nAll items in inventory:")
+    println(physicalBook.getDescription())
+    println(ebook.getDescription())
+    println(audiobook.getDescription())
+    println(magazine.getDescription())
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 2: Polymorphism - Treat Different Types Uniformly
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ PART 2: Polymorphism with Interfaces ═══")
+    
+    // All these different types can be treated as Sellable
+    val inventory: List<Sellable> = listOf(
+        physicalBook, ebook, audiobook, magazine
+    )
+    
+    // Process each as a Sellable item
+    println("\n📦 Processing all sellable items:")
+    inventory.forEach { item ->
+        println("  ${item.title}: $${item.price}")
+    }
+    
+    // Calculate total inventory value
+    val totalValue = inventory.sumOf { it.price }
+    println("\nTotal inventory value: $${String.format("%.2f", totalValue)}")
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 3: Using Interface Methods
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ PART 3: Interface Methods in Action ═══")
+    
+    // Process a sale (works with ANY Sellable)
+    processSale(physicalBook, 2)
+    processSale(audiobook, 1)
+    
+    // Display reading info (works with ANY Readable)
+    displayReadingInfo(physicalBook)
+    displayReadingInfo(magazine)
+    // displayReadingInfo(audiobook)  // ❌ Won't compile - AudioBook isn't Readable!
+    
+    // Download digital items (works with ANY Digital)
+    downloadProduct(ebook)
+    downloadProduct(audiobook)
+    // downloadProduct(physicalBook)  // ❌ Won't compile - PhysicalBook isn't Digital!
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 4: Multiple Interface Implementation
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ PART 4: Multiple Interfaces ═══")
+    
+    // EBook implements FOUR interfaces!
+    println("\nEBook capabilities (implements Sellable, Readable, Digital, Reviewable):")
+    
+    // As Sellable
+    println("  Price with tax: $${String.format("%.2f", ebook.getPriceWithTax())}")
+    
+    // As Readable
+    println("  Reading difficulty: ${ebook.getReadingDifficulty()}")
+    
+    // As Digital
+    println("  Can download? ${ebook.canDownload()}")
+    
+    // As Reviewable
+    addCustomerReview(ebook, "Great book on Kotlin!", 5)
+    addCustomerReview(ebook, "Very helpful examples", 4)
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 5: Type Checking and Smart Casting
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ PART 5: Type Checking with 'is' ═══")
+    
+    // Process items based on their interfaces
+    println("\nProcessing inventory by type:")
+    inventory.forEach { item ->
+        print("${item.title}: ")
+        
+        // Check what interfaces this item implements
+        val capabilities = mutableListOf<String>()
+        
+        if (item is Readable) capabilities.add("📖 Readable")
+        if (item is Digital) capabilities.add("💾 Digital")
+        if (item is Reviewable) capabilities.add("⭐ Reviewable")
+        
+        println(capabilities.joinToString(", "))
+        
+        // Smart casting - after 'is' check, can use interface methods
+        if (item is Digital) {
+            println("    Download size: ${item.fileSize} MB")
+        }
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // PART 6: Interface as Types
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ PART 6: Interfaces as Parameter/Return Types ═══")
+    
+    // Function that returns the cheapest Sellable item
+    fun findCheapestItem(items: List<Sellable>): Sellable? {
+        return items.minByOrNull { it.price }
+    }
+    
+    // Function that filters only Digital items
+    fun getDigitalProducts(items: List<Sellable>): List<Digital> {
+        return items.filterIsInstance<Digital>()
+    }
+    
+    val cheapest = findCheapestItem(inventory)
+    println("\n💵 Cheapest item: ${cheapest?.getDescription()}")
+    
+    val digitalItems = getDigitalProducts(inventory)
+    println("\n💾 Digital products available: ${digitalItems.size}")
+    digitalItems.forEach { 
+        println("  - File size: ${it.fileSize} MB")
+    }
+    
+    // ═══════════════════════════════════════════════════════════════════
+    // SUMMARY
+    // ═══════════════════════════════════════════════════════════════════
+    println("\n\n═══ SUMMARY: Interface Benefits ═══")
+    println("""
+        
+        Interfaces provide:
+        
+        1. CONTRACTS - Define what methods/properties a class must have
+           Example: All Sellable items MUST have price and getDescription()
+        
+        2. MULTIPLE INHERITANCE - A class can implement many interfaces
+           Example: EBook implements Sellable, Readable, Digital, Reviewable
+        
+        3. POLYMORPHISM - Treat different types uniformly
+           Example: Process any Sellable item the same way
+        
+        4. DEFAULT IMPLEMENTATIONS - Provide common behavior
+           Example: getPriceWithTax() works for all Sellable items
+        
+        5. FLEXIBILITY - Add new types without changing existing code
+           Example: Could add VideoTutorial implementing Sellable & Digital
+        
+        Key Difference from Classes:
+        - A class can extend only ONE class
+        - A class can implement MULTIPLE interfaces
+        - Interfaces can't hold state (no backing fields)
+        - Interfaces define "what" not "how"
+        
+        Use interfaces when you want to define capabilities that 
+        different types of objects can share!
+        
+    """.trimIndent())
+}
